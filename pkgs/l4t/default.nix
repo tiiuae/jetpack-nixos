@@ -138,6 +138,10 @@ let
 
       remapFile=$(mktemp)
       echo NvOsLibraryLoad NvOsLibraryLoad_3d > $remapFile
+
+      #remove broken libcuda links
+      rm ./lib/libcuda.*
+      
       for lib in $(find ./lib -name "*.so*"); do
         if isELF $lib; then
           ${patchelf_new}/bin/patchelf "$lib" \
