@@ -140,7 +140,7 @@ let
       echo NvOsLibraryLoad NvOsLibraryLoad_3d > $remapFile
 
       #remove broken libcuda links
-      rm ./lib/libcuda.*
+      rm ./lib/libcuda.so
       
       for lib in $(find ./lib -name "*.so*"); do
         if isELF $lib; then
