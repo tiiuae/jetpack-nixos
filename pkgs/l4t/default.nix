@@ -107,11 +107,11 @@ let
     buildInputs = [ l4t-core libglvnd egl-wayland ];
     postPatch = ''
       # Replace incorrect ICD symlinks
-      rm -rf etc
-      mkdir -p share/vulkan/icd.d
-      mv lib/nvidia_icd.json share/vulkan/icd.d/nvidia_icd.json
+      #rm -rf etc
+      #mkdir -p share/vulkan/icd.d
+      #mv lib/nvidia_icd.json share/vulkan/icd.d/nvidia_icd.json
       # Use absolute path in ICD json
-      sed -i -E "s#(libGLX_nvidia)#$out/lib/\\1#" share/vulkan/icd.d/nvidia_icd.json
+      #sed -i -E "s#(libGLX_nvidia)#$out/lib/\\1#" share/vulkan/icd.d/nvidia_icd.json
 
       rm -f share/glvnd/egl_vendor.d/10_nvidia.json
       cp lib/tegra-egl/nvidia.json share/glvnd/egl_vendor.d/10_nvidia.json
