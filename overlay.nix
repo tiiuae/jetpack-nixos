@@ -100,8 +100,9 @@ in
 
     kernelPackagesOverlay = final: prev: {
       nvidia-display-driver = self.callPackage ./kernel/display-driver.nix { };
+      oot-modules = self.callPackage ./kernel/oot-modules.nix { };
       nvgpu = self.callPackage ./kernel/nvgpu.nix { };
-      nvidia-oot = self.callPackage ./kernel/nvidia-oot.nix { };
+      nvidia-oot = self.callPackage ./kernel/nvidia-oot.nix {  };
     };
 
     kernel = self.callPackage ./kernel { kernelPatches = [ ]; };

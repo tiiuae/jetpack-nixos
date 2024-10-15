@@ -4,18 +4,21 @@
 , kernel
 , gitRepos
 , l4tVersion
+, pkgs
 }:
 
 stdenv.mkDerivation rec {
   pname = "nvidia-oot";
   version = "jetson_${l4tVersion}";
 
-   src = gitRepos."nvidia-oot";
+  src = gitRepos."nvidia-oot";
 
   #setSourceRoot = "sourceRoot=$(echo /build/linux-nv-oot-*)";
-  sourceRoot="linux-nv-oot-564ce2a";
+  # sourceRoot="linux-nv-oot-564ce2a";
 
-  nativeBuildInputs = kernel.moduleBuildDependencies;
+  nativeBuildInputs = kernel.moduleBuildDependencies ++ [
+    pkgs.breakpointHook
+  ];
 
   # makeFlags = kernel.makeFlags ++ [
   makeFlags = [
@@ -27,28 +30,10 @@ stdenv.mkDerivation rec {
     "TARGET_ARCH=aarch64"
   ];
 
+  # KERNEL_HEADERS="${kernel.dev}/lib/modules/6.8.12/source/";
+
   # Avoid an error in modpost: "__stack_chk_guard" [.../nvidia.ko] undefined
   # NIX_CFLAGS_COMPILE = "-fno-stack-protector";
-
-    postUnpack = ''
-    cd linux-nv-oot-564ce2a
-    sourceRoot=$(pwd -P)
-    
-    cat >> Makefile  <<EOF
-
-all:
-	env > /dev/stdout
-	make -C $SYSOUT  
-
-clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-
-EOF
-    '';
-    preBuildPhase = ''
-    echo prebuildphase 
-    '';   
-
   installTargets = [ "modules_install" ];
   enableParallelBuilding = true;
 
