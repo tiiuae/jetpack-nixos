@@ -134,11 +134,6 @@
     "/usr/lib/aarch64-linux-gnu/tegra/libgstnvcustomhelper.so",
     "/usr/lib/aarch64-linux-gnu/tegra/libgstnvdsseimeta.so"
   ],
-  "nvidia-l4t-libvulkan": [
-    "/usr/lib/aarch64-linux-gnu/tegra/libvulkan.so.1.3.204",
-    "/usr/lib/aarch64-linux-gnu/libvulkan.so.1.3.204",
-    "/usr/lib/aarch64-linux-gnu/tegra/libvulkan.so.1"
-  ],
   "nvidia-l4t-multimedia": [
     "/usr/lib/aarch64-linux-gnu/tegra/libnvbufsurftransform.so.1.0.0",
     "/usr/lib/aarch64-linux-gnu/tegra/libnvcuvidv4l2.so",

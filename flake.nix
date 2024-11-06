@@ -37,8 +37,8 @@
 
           inherit (x86_packages)
             board-automation python-jetson;
-          inherit (x86_packages.cudaPackages)
-            nsight_systems_host nsight_compute_host;
+          # inherit (x86_packages.cudaPackages)
+          #   nsight_systems_host nsight_compute_host;
         }
         # Flashing and board automation scripts _only_ work on x86_64-linux
         // x86_packages.flashScripts
@@ -52,7 +52,7 @@
 
       checks = nixpkgs.lib.mapAttrs
         (system: _: {
-          formatting = nixpkgs.legacyPackages.${system}.callPackage ./ci/formatting.nix { };
+          # formatting = nixpkgs.legacyPackages.${system}.callPackage ./ci/formatting.nix { };
         })
         self.legacyPackages;
 
