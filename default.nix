@@ -21,19 +21,21 @@ let
 
   pkgsAarch64 = if pkgs.stdenv.buildPlatform.isAarch64 then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
 
-  jetpackVersion = "5.1.2";
-  l4tVersion = "35.4.1";
-  cudaVersion = "11.4";
+  jetpackVersion = "5.1.3";
+  l4tVersion = "36.3.0";
+  cudaVersion = "12.2.1";
+	fvForEKB = "ba d6 6e b4 48 49 83 68 4b 99 2f e5 4a 64 8b b8"; 
+  fvForSSK = "e4 20 f5 8d 1d ea b5 24 c2 70 d8 d2 3e ca 45 e8";
 
   # https://developer.nvidia.com/embedded/jetson-linux-archive
   # https://repo.download.nvidia.com/jetson/
 
   src = fetchurl {
     url = with lib.versions; "https://developer.download.nvidia.com/embedded/L4T/r${major l4tVersion}_Release_v${minor l4tVersion}.${patch l4tVersion}/release/Jetson_Linux_R${l4tVersion}_aarch64.tbz2";
-    sha256 = "sha256-crdaDH+jv270GuBmNLtnw4qSaCFV0SBgJtvuSmuaAW8=";
+    sha256 = "sha256-tGVlQIMedLkR4lBtLFZ8uxRv3dWUK2dfgML2ENakD0M=";
   };
 
-  sourceInfo = import ./sourceinfo { inherit lib fetchurl fetchgit l4tVersion; };
+  sourceInfo = import ./sourceinfo { inherit lib fetchurl fetchgit l4tVersion fvForEKB fvForSSK; };
   inherit (sourceInfo) debs gitRepos;
 
   # we use a more recent version of bzip2 here because we hit this bug extracting nvidia's archives:
