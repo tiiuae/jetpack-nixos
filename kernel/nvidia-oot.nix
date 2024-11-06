@@ -43,8 +43,11 @@ stdenv.mkDerivation {
   # git add .
   # git commit -m "Initial commit"
   # <make changes>
-  # git diff > ../0001-build-fixes.patch
-  patches = [ ./0001-build-fixes.patch ];
+  # git diff > ../MY-PATCH.patch
+  patches = [
+    ./0001-build-fixes.patch
+    ./linux-6-6-build-fixes.patch
+  ];
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.
