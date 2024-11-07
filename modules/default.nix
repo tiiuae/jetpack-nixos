@@ -170,7 +170,7 @@ in
       in
       [
         l4tCoreWrapper
-        l4t-cuda
+        # l4t-cuda
         l4t-nvsci # cuda may use nvsci
         l4t-gbm
         l4t-wayland
