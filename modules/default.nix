@@ -138,7 +138,7 @@ in
 
     hardware.deviceTree.enable = true;
 
-    hardware.opengl.package = pkgs.nvidia-jetpack.l4t-3d-core;
+    # hardware.opengl.package = pkgs.nvidia-jetpack.l4t-3d-core;
     hardware.opengl.extraPackages =
       with pkgs.nvidia-jetpack;
       # l4t-core provides - among others - libnvrm_gpu.so and libnvrm_mem.so.
@@ -189,14 +189,14 @@ in
     # Force the driver, since otherwise the fbdev or modesetting X11 drivers
     # may be used, which don't work and can interfere with the correct
     # selection of GLX drivers.
-    services.xserver.drivers = lib.mkForce (lib.singleton {
-      name = "nvidia";
-      modules = [ pkgs.nvidia-jetpack.l4t-3d-core ];
-      display = true;
-      screenSection = ''
-        Option "AllowEmptyInitialConfiguration" "true"
-      '';
-    });
+    # services.xserver.drivers = lib.mkForce (lib.singleton {
+    #   name = "nvidia";
+    #   modules = [ pkgs.nvidia-jetpack.l4t-3d-core ];
+    #   display = true;
+    #   screenSection = ''
+    #     Option "AllowEmptyInitialConfiguration" "true"
+    #   '';
+    # });
 
     # If we aren't using modesetting, we won't have a DRM device with the
     # "master-of-seat" tag, so "loginctl show-seat seat0" reports
