@@ -242,7 +242,7 @@ in
       };
 
     environment.systemPackages = with pkgs.nvidia-jetpack; [
-      l4t-tools
+      # l4t-tools
       otaUtils # Tools for UEFI capsule updates
     ];
 

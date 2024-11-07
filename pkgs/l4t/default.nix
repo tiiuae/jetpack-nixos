@@ -377,7 +377,7 @@ in
     l4t-nvpmodel
     l4t-nvsci
     l4t-pva
-    l4t-tools
+    # l4t-tools
     l4t-wayland
     l4t-xusb-firmware;
 }
