@@ -337,14 +337,14 @@ let
   };
 
   # For tegrastats and jetson_clocks
-  l4t-tools = buildFromDeb {
-    name = "nvidia-l4t-tools";
-    buildInputs = [ stdenv.cc.cc.lib l4t-core ];
-    # Remove some utilities that bring in too many libraries
-    postPatch = ''
-      rm bin/nv_macsec_wpa_supplicant
-    '';
-  };
+  # l4t-tools = buildFromDeb {
+  #   name = "nvidia-l4t-tools";
+  #   buildInputs = [ stdenv.cc.cc.lib l4t-core ];
+  #   # Remove some utilities that bring in too many libraries
+  #   postPatch = ''
+  #     rm bin/nv_macsec_wpa_supplicant
+  #   '';
+  # };
 
   l4t-wayland = buildFromDeb {
     name = "nvidia-l4t-wayland";
