@@ -93,9 +93,9 @@ let
 
   l4t = callPackages ./pkgs/l4t { inherit debs l4tVersion; };
 
-  cudaPackages = callPackages ./pkgs/cuda-packages { inherit debs cudaVersion autoAddOpenGLRunpathHook l4t; };
+  # cudaPackages = callPackages ./pkgs/cuda-packages { inherit debs cudaVersion autoAddOpenGLRunpathHook l4t; };
 
-  samples = callPackages ./pkgs/samples { inherit debs cudaVersion autoAddOpenGLRunpathHook l4t cudaPackages; };
+  # samples = callPackages ./pkgs/samples { inherit debs cudaVersion autoAddOpenGLRunpathHook l4t cudaPackages; };
 
   tests = callPackages ./pkgs/tests { inherit l4tVersion; };
 
@@ -108,18 +108,18 @@ let
   rtkernel = callPackage ./kernel { inherit (l4t) l4t-xusb-firmware; kernelPatches = [ ]; realtime = true; };
   rtkernelPackages = (pkgs.linuxPackagesFor rtkernel).extend kernelPackagesOverlay;
 
-  nxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
-    targetSom = "nx";
-    inherit cudaPackages;
-  };
-  xavierAgxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
-    targetSom = "xavier-agx";
-    inherit cudaPackages;
-  };
-  orinAgxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
-    targetSom = "orin-agx";
-    inherit cudaPackages;
-  };
+  # nxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
+  #   targetSom = "nx";
+  #   inherit cudaPackages;
+  # };
+  # xavierAgxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
+  #   targetSom = "xavier-agx";
+  #   inherit cudaPackages;
+  # };
+  # orinAgxJetsonBenchmarks = pkgs.callPackage ./pkgs/jetson-benchmarks {
+  #   targetSom = "orin-agx";
+  #   inherit cudaPackages;
+  # };
 
   supportedConfigurations = lib.listToAttrs (map
     (c: {
@@ -163,7 +163,7 @@ rec {
   inherit bspSrc debs gitRepos;
   inherit unpackedDebs unpackedDebsFilenames unpackedGitRepos;
 
-  inherit cudaPackages samples tests;
+  # inherit cudaPackages samples tests;
   inherit flash-tools;
   inherit board-automation; # Allows automation of Orin AGX devkit
   inherit python-jetson; # Allows automation of Xavier AGX devkit
@@ -172,7 +172,7 @@ rec {
   inherit kernel kernelPackages;
   inherit rtkernel rtkernelPackages;
 
-  inherit nxJetsonBenchmarks xavierAgxJetsonBenchmarks orinAgxJetsonBenchmarks;
+  # inherit nxJetsonBenchmarks xavierAgxJetsonBenchmarks orinAgxJetsonBenchmarks;
 
   inherit edk2-jetson uefi-firmware;
   inherit otaUtils;
