@@ -111,7 +111,7 @@ lib.mkMerge [{
         targetBoard = mkDefault "jetson-orin-nano-devkit";
         # Use this instead if you want to use the original Xavier NX Devkit module (p3509-a02)
         #targetBoard = mkDefault "p3509-a02+p3767-0000";
-        partitionTemplate = mkDefault "${pkgs.nvidia-jetpack.bspSrc}/bootloader/t186ref/cfg/flash_t234_qspi.xml";
+        partitionTemplate = mkDefault "${pkgs.nvidia-jetpack.bspSrc}/bootloader/generic/cfg/flash_t234_qspi.xml";
       })
 
       (mkIf (cfg.som == "xavier-agx") {
