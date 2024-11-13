@@ -19,6 +19,8 @@
 , gst_all_1
 , gtk3
 , libv4l
+, makeWrapper
+, bc
 , debs
 , l4tVersion
 }:
@@ -84,7 +86,11 @@ let
       '';
 
       installPhase = ''
+        runHook preInstall
+
         cp -r . $out
+
+        runHook postInstall
       '';
 
       meta = {
@@ -102,16 +108,17 @@ let
     buildInputs = [ stdenv.cc.cc.lib expat libglvnd ];
   };
 
+  # TODO: Split this package up into subpackages similar to what is done in meta-tegra: vulkan, glx, egl, etc
   l4t-3d-core = buildFromDeb {
     name = "nvidia-l4t-3d-core";
     buildInputs = [ l4t-core libglvnd egl-wayland ];
     postPatch = ''
       # Replace incorrect ICD symlinks
-      rm -rf etc
-      mkdir -p share/vulkan/icd.d
-      mv lib/nvidia_icd.json share/vulkan/icd.d/nvidia_icd.json
+      #rm -rf etc
+      #mkdir -p share/vulkan/icd.d
+      #mv lib/nvidia_icd.json share/vulkan/icd.d/nvidia_icd.json
       # Use absolute path in ICD json
-      sed -i -E "s#(libGLX_nvidia)#$out/lib/\\1#" share/vulkan/icd.d/nvidia_icd.json
+      #sed -i -E "s#(libGLX_nvidia)#$out/lib/\\1#" share/vulkan/icd.d/nvidia_icd.json
 
       rm -f share/glvnd/egl_vendor.d/10_nvidia.json
       cp lib/tegra-egl/nvidia.json share/glvnd/egl_vendor.d/10_nvidia.json
@@ -121,9 +128,8 @@ let
       rm -rf lib/tegra-egl
       rm -f lib/nvidia.json
 
-      # Make some symlinks also done by OE4T
-      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so.1
-      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so
+      # Remove libnvidia-ptxjitcompiler, which is included in l4t-cuda instead
+      rm -f lib/libnvidia-ptxjitcompiler.*
 
       # Some libraries, like libEGL_nvidia.so.0 from l4t-3d-core use a dlopen
       # wrapper called NvOsLibraryLoad, which originates in libnvos.so in
@@ -138,6 +144,11 @@ let
 
       remapFile=$(mktemp)
       echo NvOsLibraryLoad NvOsLibraryLoad_3d > $remapFile
+
+      #remove broken libcuda links
+      echo remove broken libcuda links
+      rm ./lib/libcuda.so
+      
       for lib in $(find ./lib -name "*.so*"); do
         if isELF $lib; then
           ${patchelf_new}/bin/patchelf "$lib" \
@@ -177,6 +188,18 @@ let
       # Additional libcuda symlinks
       ln -sf libcuda.so.1.1 lib/libcuda.so.1
       ln -sf libcuda.so.1.1 lib/libcuda.so
+
+      # Also unpack l4t-3d-core so we can grab libnvidia-ptxjitcompiler from it
+      # and include it in this library.
+      #
+      # It's unclear why NVIDIA has this library in l4t-3d-core and not in
+      # l4t-core. Even more so since the cuda compat package has libcuda as
+      # well as libnvidia-ptxjitcompiler in the same package. meta-tegra does a
+      # similar thing where they pull libnvidia-ptxjitcompiler out of
+      # l4t-3d-core and place it in the same package as libcuda.
+      dpkg --fsys-tarfile ${debs.t234.nvidia-l4t-3d-core.src} | tar -xO ./usr/lib/aarch64-linux-gnu/tegra/libnvidia-ptxjitcompiler.so.${l4tVersion} > lib/libnvidia-ptxjitcompiler.so.${l4tVersion}
+      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so.1
+      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so
     '';
 
     # libcuda.so actually depends on libnvcucompat.so at runtime (probably
@@ -263,6 +286,12 @@ let
         stripLen = 1;
         extraPrefix = "usr/src/jetson_multimedia_api/";
       })
+      (fetchpatch {
+        url = "https://raw.githubusercontent.com/OE4T/meta-tegra/cc1c28f05fbd1b511d3bca3795dd9b6a35df5914/recipes-multimedia/argus/tegra-mmapi-samples/0004-samples-classes-fix-a-data-race-in-shutting-down-deq.patch";
+        sha256 = "sha256-AasoKK4lQRgtVDkKlqS06jUzk99o+MajlxMoZzPGrSw=";
+        stripLen = 1;
+        extraPrefix = "usr/src/jetson_multimedia_api/";
+      })
     ];
     postPatch = ''
       cp -r src/jetson_multimedia_api/{argus,include,samples} .
@@ -337,14 +366,18 @@ let
   };
 
   # For tegrastats and jetson_clocks
-  # l4t-tools = buildFromDeb {
-  #   name = "nvidia-l4t-tools";
-  #   buildInputs = [ stdenv.cc.cc.lib l4t-core ];
-  #   # Remove some utilities that bring in too many libraries
-  #   postPatch = ''
-  #     rm bin/nv_macsec_wpa_supplicant
-  #   '';
-  # };
+  l4t-tools = buildFromDeb {
+    name = "nvidia-l4t-tools";
+    nativeBuildInputs = [ makeWrapper ];
+    buildInputs = [ stdenv.cc.cc.lib l4t-core ];
+    # Remove some utilities that bring in too many libraries
+    postPatch = ''
+      rm sbin/nv_wpa_supplicant_wifi
+    '';
+    postFixup = ''
+      wrapProgram $out/bin/nv_fuse_read.sh --prefix PATH : ${lib.makeBinPath [ bc ]}
+    '';
+  };
 
   l4t-wayland = buildFromDeb {
     name = "nvidia-l4t-wayland";
@@ -377,7 +410,7 @@ in
     l4t-nvpmodel
     l4t-nvsci
     l4t-pva
-    # l4t-tools
+    l4t-tools
     l4t-wayland
     l4t-xusb-firmware;
 }
