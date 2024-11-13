@@ -169,7 +169,7 @@ let
           #$out/lib/libnvidia-vulkan-producer.so
 
         patchelf --add-rpath ${lib.makeLibraryPath (with xorg; [ libX11 libXext libxcb ])} \
-          $out/lib/libGLX_nvidia.so.0 \
+          #$out/lib/libGLX_nvidia.so.0 \
           $out/lib/libnvidia-glsi.so.*
 
         for lib in $(find "$out/lib" -name "*.so*"); do
