@@ -165,7 +165,7 @@ let
       postFixupHooks+=('
         patchelf --add-rpath ${lib.makeLibraryPath [ libglvnd ]} \
           $out/lib/libEGL_nvidia.so.0 \
-          $out/lib/libGLX_nvidia.so.0 \
+          #$out/lib/libGLX_nvidia.so.0 \
           $out/lib/libnvidia-vulkan-producer.so
 
         patchelf --add-rpath ${lib.makeLibraryPath (with xorg; [ libX11 libXext libxcb ])} \
