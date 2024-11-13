@@ -103,7 +103,7 @@ lib.mkMerge [{
         targetBoard = mkDefault "jetson-agx-orin-devkit-industrial";
         # Remove the sdmmc part of this flash.xmo file. The industrial spi part is still different
         partitionTemplate = mkDefault (pkgs.runCommand "flash.xml" { nativeBuildInputs = [ pkgs.buildPackages.xmlstarlet ]; } ''
-          xmlstarlet ed -d '//device[@type="sdmmc_user"]' ${pkgs.nvidia-jetpack.bspSrc}/bootloader/t186ref/cfg/flash_t234_qspi_sdmmc_industrial.xml >$out
+          xmlstarlet ed -d '//device[@type="sdmmc_user"]' ${pkgs.nvidia-jetpack.bspSrc}/bootloader/generic/cfg/flash_t234_qspi_sdmmc_industrial.xml >$out
         '');
       })
 
