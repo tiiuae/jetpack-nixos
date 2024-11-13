@@ -119,7 +119,7 @@ lib.mkMerge [{
         # Remove unnecessary partitions to make it more like
         # flash_t194_uefi_sdmmc_min.xml, except also keep the A/B slots of
         # each partition
-        partitionTemplate = mkDefault (filterPartitions xavierAgxPartitionsToRemove "${pkgs.nvidia-jetpack.bspSrc}/bootloader/t186ref/cfg/flash_t194_sdmmc.xml");
+        partitionTemplate = mkDefault (filterPartitions xavierAgxPartitionsToRemove "${pkgs.nvidia-jetpack.bspSrc}/bootloader/generic/cfg/flash_t194_sdmmc.xml");
       })
 
       (mkIf (cfg.som == "xavier-nx") {
