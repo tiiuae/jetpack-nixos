@@ -175,6 +175,8 @@ in
       (import ../overlay-with-config.nix config)
     ];
 
+		boot.zfs.package = pkgs.zfs;
+
     boot.kernelPackages =
       if cfg.kernel.realtime then
         pkgs.nvidia-jetpack.rtkernelPackages
