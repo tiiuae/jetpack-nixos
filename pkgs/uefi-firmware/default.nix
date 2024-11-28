@@ -80,14 +80,25 @@ let
 
   # See: https://github.com/NVIDIA/edk2-edkrepo-manifest/blob/main/edk2-nvidia/Jetson/NVIDIAJetsonManifest.xml
   edk2-src = applyPatches {
-    src = fetchFromGitHub {
+    src = (fetchFromGitHub {
       name = "edk2-src";
       owner = "NVIDIA";
       repo = "edk2";
       rev = "r${l4tVersion}";
       fetchSubmodules = true;
       sha256 = "sha256-FmQHcCbSXdeNS1/u5xlhazhP75nRyNuCK1D5AREQsIA=";
-    };
+    }).overrideAttrs
+      {
+        # Workaround to for unavailable https://github.com/Zeex/subhook
+        # Change subhook url from https://github.com/Zeex/subhook to
+        # https://github.com/tianocore/edk2-subhook because old url is
+        # no longer available.
+        #
+        # Will be fixed after r36.5.0, so delete then.
+        GIT_CONFIG_COUNT = 1;
+        GIT_CONFIG_KEY_0 = "url.https://github.com/tianocore/edk2-subhook.git.insteadOf";
+        GIT_CONFIG_VALUE_0 = "https://github.com/Zeex/subhook.git";
+      };
     patches = edk2UefiPatches ++ [
       (fetchpatch {
         name = "CVE-2022-36764.patch";
