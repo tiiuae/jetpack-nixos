@@ -46,6 +46,7 @@ stdenv.mkDerivation {
   # git diff > ../MY-PATCH.patch
   patches = [
     ./0001-build-fixes.patch
+    ./linux-6-6-build-fixes.patch
   ];
 
   postUnpack = ''

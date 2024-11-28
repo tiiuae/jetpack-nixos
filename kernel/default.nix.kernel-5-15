@@ -1,90 +1,54 @@
 { pkgs
-, applyPatches
 , lib
 , fetchFromGitHub
 , fetchpatch
-, fetchurl
-, fetchgit
 , l4t-xusb-firmware
 , realtime ? false
 , kernelPatches ? [ ]
 , structuredExtraConfig ? { }
+, extraMeta ? { }
 , argsOverride ? { }
-, buildLinux
+, fetchurl
+, runCommand
 , ...
 }@args:
 let
   isNative = pkgs.stdenv.isAarch64;
   pkgsAarch64 = if isNative then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
+
+  src = fetchurl {
+    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
+    hash = "sha256-6U2+ACWuMT7rYDBhaXr+13uWQdKgbfAiiIV0Vi3R9sU=";
+  };
+
+  source = runCommand "source-kernel" { } ''
+    tar xf ${src}
+    cd Linux_for_Tegra/source
+    mkdir $out
+    tar -C $out -xf kernel_src.tbz2
+    mv $out/kernel/kernel-jammy-src $out/bsp-kernel
+    cp -vpr $out/bsp-kernel/* $out/
+    rm -rf $out/bsp-kernel
+   '';
+
 in
 pkgsAarch64.buildLinux (args // {
-  version = "6.6.59" + lib.optionalString realtime "-rt96";
-  extraMeta.branch = "6.6";
+  version = "5.15.136" + lib.optionalString realtime "-rt70";
+  extraMeta.branch = "5.15";
 
   defconfig = "defconfig";
 
   # Using applyPatches here since it's not obvious how to append an extra
   # postPatch. This is not very efficient.
-  src = applyPatches {
-    src = fetchgit {
-      url = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git";
-      hash = "sha256-SSTZ5I+zhO3horHy9ISSXQdeIWrkkU5uMlbQVnB5zxY=";
-      rev = "bf3af7e92bda9f48085b7741e657eeb387a61644";
-    };
+  src = source;
 
-    patches = [
-
-      (fetchpatch {
-        name = "memory: tegra: Add Tegra234 clients for RCE and VI";
-        url = "https://github.com/torvalds/linux/commit/9def28f3b8634e4f1fa92a77ccb65fbd2d03af34.patch";
-        hash = "sha256-WZwKGL0kPZ3SxwdW3oi7Z3Tc0BMuuOuL9/HlLzg73q8=";
-      })
-
-      (fetchpatch {
-        name = "hwmon: (ina3221) Add support for channel summation disable";
-        url = "https://github.com/torvalds/linux/commit/7b64906c98fe503338066b97d3ff2dad65debf2b.patch";
-        hash = "sha256-SB2zipFoJQsOjuKUFV8W1PBi8J8qTgdZcuPI3lNvGuA=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: save CPU data to avoid repeated SMP calls";
-        url = "https://github.com/torvalds/linux/commit/6b121b4cf7e1f598beecf592d6184126b46eca46.patch";
-        hash = "sha256-/v73qEkT3nrdzMDQZCbSMeacLSgj5aZTwnhvM1lFd+w=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: use refclk delta based loop instead of udelay";
-        url = "https://github.com/torvalds/linux/commit/a60a556788752a5696960ed11409a552b79e68e8.patch";
-        hash = "sha256-ZvogH5F3dUGHVXcpqhxbDah1Llc13J7SOYVVbJpstTw=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: remove redundant AND with cpu_online_mask";
-        url = "https://github.com/torvalds/linux/commit/c12f0d0ffade589599a43b0d0f0965579ca80f76.patch";
-        hash = "sha256-iiW20hwMQS/B6F1I3O5KwMdIVYrdOwSPzKrB5juaxMY=";
-      })
-
-      (fetchpatch {
-        name = "fbdev/simplefb: Support memory-region property";
-        url = "https://github.com/torvalds/linux/commit/8ddfc01ace51c85a2333fb9a9cbea34d9f87885d.patch";
-        hash = "sha256-rMk0BIjOsc21HFF6Wx4pngnldp/LB0ODbUFGRDjtsUw=";
-      })
-
-      (fetchpatch {
-        name = "fbdev/simplefb: Add support for generic power-domains";
-        url = "https://github.com/torvalds/linux/commit/92a511a568e44cf11681a2223cae4d576a1a515d.patch";
-        hash = "sha256-GOo7OLQObixVEKguiEzp1xLMlqE0QMQVhx8ygwkNb9M=";
-      })
-    ];
-  };
   autoModules = false;
   features = { }; # TODO: Why is this needed in nixpkgs master (but not NixOS 22.05)?
 
   # As of 22.11, only kernel configs supplied through kernelPatches
   # can override configs specified in the platforms
   kernelPatches = [
-    # TODO Still needed?
-    # if USB_XHCI_TEGRA is built as module, the kernel won't build
+  # if USB_XHCI_TEGRA is built as module, the kernel won't build
     {
       name = "make-USB_XHCI_TEGRA-builtins";
       patch = null;
@@ -92,26 +56,9 @@ pkgsAarch64.buildLinux (args // {
         USB_XHCI_TEGRA y
       '';
     }
-] ++ kernelPatches;
+  ] ++ kernelPatches;
 
   structuredExtraConfig = with lib.kernel; {
-        # Platform-dependent options for mainline kernel
-    ARM64_PMEM = yes;
-    PCIE_TEGRA194 = yes;
-    PCIE_TEGRA194_HOST = yes;
-    BLK_DEV_NVME = yes;
-    NVME_CORE = yes;
-    FB_SIMPLE = yes;
-
-    # Following modules need for iso_minimal
-    ISO9660 = module;
-    USB_UAS = module;
-
-    # Required by IO base b
-    USB_ONBOARD_HUB = no;
-
-    # TODO: Are below options still needed??
-
     #  MODPOST modules-only.symvers
     #ERROR: modpost: "xhci_hc_died" [drivers/usb/host/xhci-tegra.ko] undefined!
     #ERROR: modpost: "xhci_hub_status_data" [drivers/usb/host/xhci-tegra.ko] undefined!
@@ -120,13 +67,22 @@ pkgsAarch64.buildLinux (args // {
     #ERROR: modpost: "xhci_get_rhub" [drivers/usb/host/xhci-tegra.ko] undefined!
     #ERROR: modpost: "xhci_urb_enqueue" [drivers/usb/host/xhci-tegra.ko] undefined!
     #ERROR: modpost: "xhci_irq" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #USB_XHCI_TEGRA = module;
+    #   #USB_XHCI_TEGRA = module;
     USB_XHCI_TEGRA = yes;
 
     # stage-1 links /lib/firmware to the /nix/store path in the initramfs.
     # However, since it's builtin and not a module, that's too late, since
     # the kernel will have already tried loading!
     EXTRA_FIRMWARE_DIR = freeform "${l4t-xusb-firmware}/lib/firmware";
+    EXTRA_FIRMWARE = freeform "nvidia/tegra194/xusb.bin";
+
+    # TODO: NVIDIA-OOT compile fails if wlan is enabled
+    # Issue is with NIX and not with nvidia bsp
+    WLAN = no;
+
+    # Following modules need for iso_minimal
+    ISO9660 = module;
+    USB_UAS = module;
 
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
     # Otherwise, nvidia's driver craps out
@@ -161,9 +117,6 @@ pkgsAarch64.buildLinux (args // {
     MD_RAID1 = module;
     MD_RAID10 = module;
     MD_RAID456 = module;
-    # Re-enable DMI (revert https://github.com/OE4T/linux-tegra-5.10/commit/bc94634fcddd594735aa9c5ca5f68b4df1cb5f8b)
-    DMI = yes;
-
   } // (lib.optionalAttrs realtime {
     PREEMPT_VOLUNTARY = lib.mkForce no; # Disable the one set in common-config.nix
     # These are the options enabled/disabled by scripts/rt-patch.sh
