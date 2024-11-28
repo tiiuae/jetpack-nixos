@@ -473,10 +473,13 @@ let
       name = "vpi3";
       version = debs.common.vpi3-dev.version;
       srcs = [ debs.common.libnvvpi3.src debs.common.vpi3-dev.src ];
-      sourceRoot = "source/opt/nvidia/vpi2";
+      sourceRoot = "source/opt/nvidia/vpi3";
       buildInputs = (with l4t; [ l4t-core l4t-3d-core l4t-multimedia l4t-cupva ])
         ++ (with cudaPackages; [ libcufft libnpp ]);
-      patches = [ ./vpi2.patch ];
+      patches = [
+        # TODO PAtch still needed??
+        ./vpi2.patch
+      ];
       postPatch = ''
         rm -rf etc
         substituteInPlace lib/cmake/vpi/vpi-config.cmake --subst-var out
@@ -487,8 +490,8 @@ let
 
     # Needed for vpi2-samples benchmark w/ pva to work
     vpi2-firmware = runCommand "vpi3-firmware" { nativeBuildInputs = [ dpkg ]; } ''
-      dpkg-deb -x ${debs.common.libnvvpi2.src} source
-      install -D source/opt/nvidia/vpi2/lib64/priv/vpi2_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
+      dpkg-deb -x ${debs.common.libnvvpi3.src} source
+      install -D source/opt/nvidia/vpi3/lib64/priv/vpi3_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
     '';
   };
 in
