@@ -78,6 +78,15 @@ let
           rm -rf lib/tegra
         fi
 
+        if [[ -d lib/nvidia ]]; then
+          if [[ -z "$( ls -A 'lib/nvidia' )"  ]]; then
+            rm -rf lib/nvidia
+          else
+            mv lib/nvidia/* lib
+            rm -rf lib/nvidia
+          fi
+        fi
+
         ${postPatch}
 
         rm -f lib/ld.so.conf
@@ -122,8 +131,8 @@ let
       rm -f lib/nvidia.json
 
       # Make some symlinks also done by OE4T
-      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so.1
-      ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so
+      ln -sf libnvidia-ptxjitcompiler.so.540.3.0 lib/libnvidia-ptxjitcompiler.so.1
+      ln -sf libnvidia-ptxjitcompiler.so.540.3.0 lib/libnvidia-ptxjitcompiler.so
 
       # Some libraries, like libEGL_nvidia.so.0 from l4t-3d-core use a dlopen
       # wrapper called NvOsLibraryLoad, which originates in libnvos.so in
@@ -154,8 +163,7 @@ let
       postFixupHooks+=('
         patchelf --add-rpath ${lib.makeLibraryPath [ libglvnd ]} \
           $out/lib/libEGL_nvidia.so.0 \
-          $out/lib/libGLX_nvidia.so.0 \
-          $out/lib/libnvidia-vulkan-producer.so
+          $out/lib/libGLX_nvidia.so.0
 
         patchelf --add-rpath ${lib.makeLibraryPath (with xorg; [ libX11 libXext libxcb ])} \
           $out/lib/libGLX_nvidia.so.0 \
