@@ -86,11 +86,13 @@ pkgsAarch64.buildLinux (args // {
     # TODO Still needed?
     # if USB_XHCI_TEGRA is built as module, the kernel won't build
     {
-      name = "make-USB_XHCI_TEGRA-builtins";
+      name = "make-USB_XHCI_TEGRA-builtins with firmware";
       patch = null;
       extraConfig = ''
         USB_XHCI_TEGRA y
-      '';
+        EXTRA_FIRMWARE_DIR ${l4t-xusb-firmware}/lib/firmware
+        EXTRA_FIRMWARE nvidia/tegra194/xusb.bin
+  '';
     }
 ] ++ kernelPatches;
 
@@ -105,28 +107,12 @@ pkgsAarch64.buildLinux (args // {
 
     # Following modules need for iso_minimal
     ISO9660 = module;
-    USB_UAS = module;
+    USB_UAS = yes;
 
     # Required by IO base b
     USB_ONBOARD_HUB = no;
 
     # TODO: Are below options still needed??
-
-    #  MODPOST modules-only.symvers
-    #ERROR: modpost: "xhci_hc_died" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_hub_status_data" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_enable_usb3_lpm_timeout" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_hub_control" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_get_rhub" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_urb_enqueue" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #ERROR: modpost: "xhci_irq" [drivers/usb/host/xhci-tegra.ko] undefined!
-    #USB_XHCI_TEGRA = module;
-    USB_XHCI_TEGRA = yes;
-
-    # stage-1 links /lib/firmware to the /nix/store path in the initramfs.
-    # However, since it's builtin and not a module, that's too late, since
-    # the kernel will have already tried loading!
-    EXTRA_FIRMWARE_DIR = freeform "${l4t-xusb-firmware}/lib/firmware";
 
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
     # Otherwise, nvidia's driver craps out
