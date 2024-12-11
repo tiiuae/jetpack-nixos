@@ -197,7 +197,10 @@ rec {
       '';
       # Use cross-compiled machine here so we don't have to depend on aarch64 builders
       # TODO: Do a smaller cross-compiled version from old jetpack dir
-      dtbsDir = (pkgsAarch64.nixos {
+      dtbsDir = (throw "Please check/verify DTB(O)s. "
+        "Currently dtbsDir variable is not used! "
+        "Device trees are from NVIDIA's BSP "
+        "Remove throw when you are satisfied!") (pkgsAarch64.nixos {
         imports = [ ./modules/default.nix ];
         hardware.nvidia-jetpack.enable = true;
       }).config.hardware.deviceTree.package;

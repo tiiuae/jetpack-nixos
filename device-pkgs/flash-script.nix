@@ -44,7 +44,17 @@
   export ADDITIONAL_DTB_OVERLAY=''${ADDITIONAL_DTB_OVERLAY:+$ADDITIONAL_DTB_OVERLAY,}${lib.concatStringsSep "," additionalDtbOverlays}
 
   ${lib.optionalString (partitionTemplate != null) "cp ${partitionTemplate} flash.xml"}
-  ${lib.optionalString (dtbsDir != null) "cp -r ${dtbsDir}/. kernel/dtb/"}
+  # Note: If you need our own dtb/dtbo then you need to do something like:
+  # cp my-dtb-derivation/mydtb.dtb kernel/dtb/(target dtb or overlay)
+  ${lib.optionalString (dtbsDir == null) ''
+    echo ""
+    echo "WARNING!"
+    echo "Device tree and overlays are used from NVIDIA BSP."
+    echo "Emphasizing device trees are from NVIDIA BSP!"
+    echo "If need for own dtb or dtbo, edit jetpack-nixos (start \"flash-script.nix\"-file)"
+    echo "WARNING!"
+    echo ""
+  ''}
   ${lib.optionalString (uefi-firmware != null) ''
   cp ${uefi-firmware}/uefi_jetson.bin bootloader/uefi_jetson.bin
 

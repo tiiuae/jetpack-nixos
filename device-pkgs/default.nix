@@ -51,7 +51,6 @@ let
 
   mkFlashScript = args: import ./flash-script.nix ({
     inherit lib flashArgs partitionTemplate;
-
     inherit (cfg.flashScriptOverrides) additionalDtbOverlays;
 
     flash-tools = flash-tools-patched;
@@ -71,7 +70,9 @@ let
     inherit tosImage;
     eksFile = cfg.firmware.eksFile;
 
-    dtbsDir = config.hardware.deviceTree.package;
+    # Disabling dtb(o). DTB are used from NVIDIA BSP.
+    # dtbsDir = config.hardware.deviceTree.package;
+    dtbsDir = null;
   } // args);
 
   # This produces a script where we have already called the ./flash.sh script
@@ -297,7 +298,10 @@ let
 
       # Fuse script needs device tree files, which aren't already present for
       # non-devkit boards, so we need to get our built version of them
-      dtbsDir = config.hardware.deviceTree.package;
+      dtbsDir = (throw "Please check/verify DTB(O)s. "
+        "Currently dtbsDir variable is not used! "
+        "Device trees are from NVIDIA's BSP "
+        "Remove throw when you are satisfied!") config.hardware.deviceTree.package;
     };
   };
 in
