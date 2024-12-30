@@ -3,21 +3,112 @@
   kernel,
   runCommand,
   fetchurl,
+  fetchgit,
   lib,
   buildPackages
 }:
 let
-  src = fetchurl {
-    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
-    hash = "sha256-6U2+ACWuMT7rYDBhaXr+13uWQdKgbfAiiIV0Vi3R9sU=";
+
+  # TODO: update to jetson_36.5 when available
+  l4tTag = "rel-36_eng_2024-10-24";
+
+  jetsonLinux = fetchurl {
+    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.0/release/Jetson_Linux_R36.4.0_aarch64.tbz2";
+    sha256 = "sha256-ftl/Yg4+/HztzpB2EuTHOuNl+IeOjzX9vwWWAZmrAB4=";
   };
 
+  nvgpuSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/linux-nvgpu";
+    rev = "${l4tTag}";
+    hash = "sha256-dleWf4vymh9xDmW+JfJQrG7bXF4xiXeblZBQrHlzibc=";
+  };
+
+  nvidiaOotSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/linux-nv-oot";
+    rev = "${l4tTag}";
+    hash = "sha256-+un39i6DveTMdx+RIndJPsduCjVixN09qeERZLdZ7m4=";
+  };
+
+  nvidiaOotSrcPatched = stdenv.mkDerivation {
+    name = "nvidia-oot-patched-source";
+    src = nvidiaOotSrc;
+    patches = [ 
+      ./patches/0001-nvidia-oot-Fix-build-for-Linux-v6.12.patch 
+    ];
+    phases = [ "unpackPhase" "patchPhase" "installPhase" ];
+    installPhase = ''
+      cp -r . $out
+    '';
+  };
+
+  nvdisplaySrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/tegra/kernel-src/nv-kernel-display-driver";
+    rev = "${l4tTag}";
+    hash = "sha256-Xx41BQ1Nv/67z5OdPVEVOrnIB6FZYxu+nd7Ryn9t//0=";
+  };
+
+  nvdisplaySrcPatched = stdenv.mkDerivation {
+    name = "nvdisplay-patched-source";
+    src = nvdisplaySrc;
+    patches = [       
+      ./patches/0001-nvdisplay-Fix-build-for-Linux-v6.12.patch
+    ];
+    phases = [ "unpackPhase" "patchPhase" "installPhase" ];
+    installPhase = ''
+      cp -r . $out
+    '';
+  };
+
+  hwpmSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/linux-hwpm";
+    rev = "${l4tTag}";
+    hash = "sha256-otOVFeF+8XKORWMXTRTcXQUXvojdwInVC3jPXTgrk3A=";
+  };
+
+  nvethernetrmSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/kernel/nvethernetrm";
+    rev = "${l4tTag}";
+    hash = "sha256-cTJagcO7TYG0eT0dgZn67hX/EKT04OrTYvwBwWEe1YU=";
+  };
+
+  t23xDtsSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/device/hardware/nvidia/t23x-public-dts";
+    rev = "${l4tTag}";
+    hash = "sha256-6feN3Sau1GD60CmCww2RpwDQNJeLC3x6BcCV7PAHG7k=";
+  };
+
+  tegraPublicDtsSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/r/device/hardware/nvidia/tegra-public-dts";
+    rev = "${l4tTag}";
+    hash = "sha256-NMp7UY0OlH2ddBSrUzCUSLkvnWrELhz8xH/dkV86ids=";
+  };
+
+
+  # TODO: check if  cp -r ${kerlel.src} kernel  is needed
   source = runCommand "source" { } ''
-    tar xf ${src}
-    cd Linux_for_Tegra/source
+    set -x
+
+    echo
+    echo Extract Jetson Linux
+    tar -xf ${jetsonLinux}
+
+    echo
+    echo Copy modules sources
+    cd Linux_for_Tegra/source/
+
+    cp -r ${nvgpuSrc} nvgpu
+    cp -r ${nvidiaOotSrcPatched} nvidia-oot
+    cp -r ${hwpmSrc} hwpm
+    cp -r ${nvethernetrmSrc} nvethernetrm
+    mkdir -p hardware/nvidia/t23x/nv-public
+    cp -r ${t23xDtsSrc}/* hardware/nvidia/t23x/nv-public/
+    mkdir -p hardware/nvidia/tegra/nv-public
+    cp -r ${tegraPublicDtsSrc}/* hardware/nvidia/tegra/nv-public/
+    cp -r ${nvdisplaySrcPatched} nvdisplay
+ 
     mkdir $out
-    tar -C $out -xf kernel_oot_modules_src.tbz2
-    tar -C $out -xf nvidia_kernel_display_driver_source.tbz2
+ 
+    cp -r ./* $out
   '';
 
   # unclear why we need this, but some part of nvidia's conftest doesn't pick up the headers otherwise
@@ -45,8 +136,7 @@ stdenv.mkDerivation {
   # <make changes>
   # git diff > ../MY-PATCH.patch
   patches = [
-    ./0001-build-fixes.patch
-    ./linux-6-6-build-fixes.patch
+    ./patches/0001-build-fixes.patch
   ];
 
   postUnpack = ''
@@ -54,6 +144,8 @@ stdenv.mkDerivation {
     cp -r ${kernel.dev} linux-dev
     chmod -R u+w linux-dev
     export KERNEL_HEADERS=$(pwd)/linux-dev/lib/modules/${kernel.modDirVersion}/build
+
+    ln -sf ../../../../../../nvethernetrm source/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
 
   '';
 

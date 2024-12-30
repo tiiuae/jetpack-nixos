@@ -14,12 +14,13 @@
 , ...
 }@args:
 let
+  kernelVersion = "6.12.5";
   isNative = pkgs.stdenv.isAarch64;
   pkgsAarch64 = if isNative then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
 in
 pkgsAarch64.buildLinux (args // {
-  version = "6.6.59" + lib.optionalString realtime "-rt96";
-  extraMeta.branch = "6.6";
+  version = kernelVersion + lib.optionalString realtime "-rt96";
+  extraMeta.branch = "6.12";
 
   defconfig = "defconfig";
 
@@ -28,53 +29,11 @@ pkgsAarch64.buildLinux (args // {
   src = applyPatches {
     src = fetchgit {
       url = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git";
-      hash = "sha256-SSTZ5I+zhO3horHy9ISSXQdeIWrkkU5uMlbQVnB5zxY=";
-      rev = "bf3af7e92bda9f48085b7741e657eeb387a61644";
+      hash = "sha256-rUUQUOXSd2bT1kOmmOu45D276nTNwKBEY+WnrlmBKIs=";
+      rev = "v${kernelVersion}";
     };
 
     patches = [
-
-      (fetchpatch {
-        name = "memory: tegra: Add Tegra234 clients for RCE and VI";
-        url = "https://github.com/torvalds/linux/commit/9def28f3b8634e4f1fa92a77ccb65fbd2d03af34.patch";
-        hash = "sha256-WZwKGL0kPZ3SxwdW3oi7Z3Tc0BMuuOuL9/HlLzg73q8=";
-      })
-
-      (fetchpatch {
-        name = "hwmon: (ina3221) Add support for channel summation disable";
-        url = "https://github.com/torvalds/linux/commit/7b64906c98fe503338066b97d3ff2dad65debf2b.patch";
-        hash = "sha256-SB2zipFoJQsOjuKUFV8W1PBi8J8qTgdZcuPI3lNvGuA=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: save CPU data to avoid repeated SMP calls";
-        url = "https://github.com/torvalds/linux/commit/6b121b4cf7e1f598beecf592d6184126b46eca46.patch";
-        hash = "sha256-/v73qEkT3nrdzMDQZCbSMeacLSgj5aZTwnhvM1lFd+w=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: use refclk delta based loop instead of udelay";
-        url = "https://github.com/torvalds/linux/commit/a60a556788752a5696960ed11409a552b79e68e8.patch";
-        hash = "sha256-ZvogH5F3dUGHVXcpqhxbDah1Llc13J7SOYVVbJpstTw=";
-      })
-
-      (fetchpatch {
-        name = "cpufreq: tegra194: remove redundant AND with cpu_online_mask";
-        url = "https://github.com/torvalds/linux/commit/c12f0d0ffade589599a43b0d0f0965579ca80f76.patch";
-        hash = "sha256-iiW20hwMQS/B6F1I3O5KwMdIVYrdOwSPzKrB5juaxMY=";
-      })
-
-      (fetchpatch {
-        name = "fbdev/simplefb: Support memory-region property";
-        url = "https://github.com/torvalds/linux/commit/8ddfc01ace51c85a2333fb9a9cbea34d9f87885d.patch";
-        hash = "sha256-rMk0BIjOsc21HFF6Wx4pngnldp/LB0ODbUFGRDjtsUw=";
-      })
-
-      (fetchpatch {
-        name = "fbdev/simplefb: Add support for generic power-domains";
-        url = "https://github.com/torvalds/linux/commit/92a511a568e44cf11681a2223cae4d576a1a515d.patch";
-        hash = "sha256-GOo7OLQObixVEKguiEzp1xLMlqE0QMQVhx8ygwkNb9M=";
-      })
     ];
   };
   autoModules = false;

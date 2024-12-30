@@ -1,0 +1,87 @@
+From ca7e8a8f7e3b30b11ae8bad83addc6249d1c4adb Mon Sep 17 00:00:00 2001
+From: Juan Pablo Ruiz <juanpablo.ruiz@unikie.com>
+Date: Fri, 20 Dec 2024 20:30:29 +0200
+Subject: [PATCH 1/1] nvdisplay: Fix build for Linux v6.12
+
+- Remove deprecated output_poll_changed
+- Add 2nd null argument to drm_mode_create_hdmi_colorspace_property
+- Void platform driver remove functions
+- Update of_property_for_each_u32 calls
+
+Signed-off-by: Juan Pablo Ruiz <juanpablo.ruiz@unikie.com>
+---
+ kernel-open/nvidia-drm/nvidia-drm-connector.c | 4 ++--
+ kernel-open/nvidia-drm/nvidia-drm-drv.c       | 1 -
+ kernel-open/nvidia/nv-dsi-parse-panel-props.c | 2 +-
+ kernel-open/nvidia/nv-platform.c              | 4 +---
+ 4 files changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-drm/nvidia-drm-connector.c
+index cb8c725..1763457 100644
+--- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
+@@ -580,12 +580,12 @@ nv_drm_connector_new(struct drm_device *dev,
+                                NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL);
+ 
+     if (nv_connector->type == NVKMS_CONNECTOR_TYPE_HDMI) {
+-        if (drm_mode_create_hdmi_colorspace_property(&nv_connector->base) == 0) {
++        if (drm_mode_create_hdmi_colorspace_property(&nv_connector->base, 0) == 0) {
+             drm_connector_attach_colorspace_property(&nv_connector->base);
+         }
+         drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
+     } else if (nv_connector->type == NVKMS_CONNECTOR_TYPE_DP) {
+-        if (drm_mode_create_dp_colorspace_property(&nv_connector->base) == 0) {
++        if (drm_mode_create_dp_colorspace_property(&nv_connector->base, 0) == 0) {
+             drm_connector_attach_colorspace_property(&nv_connector->base);
+         }
+         drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
+diff --git a/kernel-open/nvidia-drm/nvidia-drm-drv.c b/kernel-open/nvidia-drm/nvidia-drm-drv.c
+index 0179486..6ea4f1a 100644
+--- a/kernel-open/nvidia-drm/nvidia-drm-drv.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-drv.c
+@@ -244,7 +244,6 @@ static const struct drm_mode_config_funcs nv_mode_config_funcs = {
+     .atomic_check  = nv_drm_atomic_check,
+     .atomic_commit = nv_drm_atomic_commit,
+ 
+-    .output_poll_changed = nv_drm_output_poll_changed,
+ };
+ 
+ static void nv_drm_event_callback(const struct NvKmsKapiEvent *event)
+diff --git a/kernel-open/nvidia/nv-dsi-parse-panel-props.c b/kernel-open/nvidia/nv-dsi-parse-panel-props.c
+index 9ac5866..9a0d084 100644
+--- a/kernel-open/nvidia/nv-dsi-parse-panel-props.c
++++ b/kernel-open/nvidia/nv-dsi-parse-panel-props.c
+@@ -493,7 +493,7 @@ static int parse_dsi_properties(const struct device_node *np_dsi, DSI_PANEL_INFO
+         "nvidia,dsi-lvds-bridge", &temp))
+         dsi->dsi2lvds_bridge_enable = (bool)temp;
+ 
+-    of_property_for_each_u32(np_dsi_panel, "nvidia,dsi-dpd-pads", prop, p, temp)
++    of_property_for_each_u32(np_dsi_panel, "nvidia,dsi-dpd-pads", temp)
+         dsi->dpd_dsi_pads |= (u32)temp;
+ 
+     if (!of_property_read_u32(np_dsi_panel,
+diff --git a/kernel-open/nvidia/nv-platform.c b/kernel-open/nvidia/nv-platform.c
+index 8c403bc..f89ce67 100644
+--- a/kernel-open/nvidia/nv-platform.c
++++ b/kernel-open/nvidia/nv-platform.c
+@@ -1189,7 +1189,7 @@ static int nv_platform_device_probe(struct platform_device *plat_dev)
+     return rc;
+ }
+ 
+-static int nv_platform_device_remove(struct platform_device *plat_dev)
++static void nv_platform_device_remove(struct platform_device *plat_dev)
+ {
+     int rc = 0;
+ 
+@@ -1203,8 +1203,6 @@ static int nv_platform_device_remove(struct platform_device *plat_dev)
+     {
+         rc = nv_platform_device_display_remove(plat_dev);
+     }
+-
+-    return rc;
+ }
+ 
+ const struct of_device_id nv_platform_device_table[] =
+-- 
+2.34.1
+

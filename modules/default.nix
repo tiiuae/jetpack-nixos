@@ -99,6 +99,9 @@ in
       (import ../overlay.nix)
     ];
 
+    # Use latest ZFS version to avoid build errors with kernel 6.12
+    boot.zfs.package = pkgs.zfs;
+
     boot.kernelPackages =
       if cfg.kernel.realtime
       then pkgs.nvidia-jetpack.rtkernelPackages
