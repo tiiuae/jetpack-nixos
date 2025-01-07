@@ -5,7 +5,8 @@
   fetchurl,
   fetchgit,
   lib,
-  buildPackages
+  buildPackages,
+  dtc,
 }:
 let
 
@@ -71,6 +72,12 @@ let
     hash = "sha256-cTJagcO7TYG0eT0dgZn67hX/EKT04OrTYvwBwWEe1YU=";
   };
 
+  kernelDeviceTreeSrc = fetchgit {
+    url = "https://nv-tegra.nvidia.com/linux/kernel-devicetree";
+    rev = "${l4tTag}";
+    hash = "sha256-mFmxO7rg1DWnYK+HDFQnc9XLpS4lwXfSXGOibKC4FPY=";
+  };
+
   t23xDtsSrc = fetchgit {
     url = "https://nv-tegra.nvidia.com/r/device/hardware/nvidia/t23x-public-dts";
     rev = "${l4tTag}";
@@ -86,8 +93,6 @@ let
 
   # TODO: check if  cp -r ${kerlel.src} kernel  is needed
   source = runCommand "source" { } ''
-    set -x
-
     echo
     echo Extract Jetson Linux
     tar -xf ${jetsonLinux}
@@ -100,6 +105,7 @@ let
     cp -r ${nvidiaOotSrcPatched} nvidia-oot
     cp -r ${hwpmSrc} hwpm
     cp -r ${nvethernetrmSrc} nvethernetrm
+    cp -r ${kernelDeviceTreeSrc} kernel-devicetree
     mkdir -p hardware/nvidia/t23x/nv-public
     cp -r ${t23xDtsSrc}/* hardware/nvidia/t23x/nv-public/
     mkdir -p hardware/nvidia/tegra/nv-public
@@ -124,32 +130,22 @@ stdenv.mkDerivation {
   inherit (kernel) version;
 
   src = source;
-  # Patch created like that:
-  # nix-build ./packages.nix -A nvidia-oot-cross.src
-  # mkdir source
-  # cp -r result/* source
-  # chmod -R +w source
-  # cd source
-  # git init .
-  # git add .
-  # git commit -m "Initial commit"
-  # <make changes>
-  # git diff > ../MY-PATCH.patch
-  patches = [
-    ./patches/0001-build-fixes.patch
-  ];
+  patches = [ ];
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.
     cp -r ${kernel.dev} linux-dev
+    cp -r ${kernel.src} linux-src
     chmod -R u+w linux-dev
-    export KERNEL_HEADERS=$(pwd)/linux-dev/lib/modules/${kernel.modDirVersion}/build
+    chmod -R u+w linux-src
+    export KERNEL_HEADERS=$(pwd)/linux-src
+    export KERNEL_OUTPUT=$(pwd)/linux-dev/lib/modules/${kernel.modDirVersion}/build
 
     ln -sf ../../../../../../nvethernetrm source/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
 
   '';
 
-  nativeBuildInputs = kernel.moduleBuildDependencies ++ [ ];
+  nativeBuildInputs = kernel.moduleBuildDependencies ++ [ dtc ];
 
   # some calls still go to `gcc` in the build
   depsBuildBuild = [ buildPackages.stdenv.cc ];
@@ -158,7 +154,6 @@ stdenv.mkDerivation {
     [
       "ARCH=${stdenv.hostPlatform.linuxArch}"
       "INSTALL_MOD_PATH=${placeholder "out"}"
-      "modules"
     ]
     ++ lib.optionals (stdenv.hostPlatform != stdenv.buildPlatform) [
       "CROSS_COMPILE=${stdenv.cc}/bin/${stdenv.cc.targetPrefix}"
@@ -175,6 +170,11 @@ stdenv.mkDerivation {
   NIX_CFLAGS_COMPILE = "-fno-stack-protector -Wno-error=attribute-warning -I ${source}/nvidia-oot/sound/soc/tegra-virt-alt/include ${
     lib.concatMapStrings (x: "-isystem ${x} ") (kernelIncludes kernel.dev)
   }";
+
+  buildPhase = ''
+    make $makeFlags modules
+    make $makeFlags dtbs
+  '';
 
   installTargets = [ "modules_install" ];
 }
