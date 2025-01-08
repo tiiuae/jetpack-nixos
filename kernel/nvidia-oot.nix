@@ -176,5 +176,12 @@ stdenv.mkDerivation {
     make $makeFlags dtbs
   '';
 
-  installTargets = [ "modules_install" ];
+  installPhase = ''
+    # Install modules
+    make INSTALL_MOD_PATH=$out modules_install
+    
+    # Install dtbs
+    mkdir -p $out/dtbs
+    cp ./kernel-devicetree/generic-dts/dtbs/*.dtb $out/dtbs/
+  '';
 }
