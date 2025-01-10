@@ -21,7 +21,7 @@ let
 
   pkgsAarch64 = if pkgs.stdenv.buildPlatform.isAarch64 then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
 
-  jetpackVersion = "5.1.3";
+  jetpackVersion = "6.0.0";
   l4tVersion = "36.3.0";
   cudaVersion = "12.2.1";
 	fvForEKB = "ba d6 6e b4 48 49 83 68 4b 99 2f e5 4a 64 8b b8"; 
