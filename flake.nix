@@ -70,8 +70,9 @@
 
             inherit (self.legacyPackages.x86_64-linux)
               board-automation python-jetson;
-            inherit (self.legacyPackages.x86_64-linux.cudaPackages)
-              nsight_systems_host nsight_compute_host;
+				    # TODO: Commented out becasue of jetpack update
+            # inherit (self.legacyPackages.x86_64-linux.cudaPackages)
+            #   nsight_systems_host nsight_compute_host;
           }
           # Flashing and board automation scripts _only_ work on x86_64-linux
           // flashScripts
