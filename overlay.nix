@@ -4,12 +4,14 @@
 
 final: prev:
 let
-  jetpackVersion = "5.1.4";
-  l4tVersion = "35.6.0";
-  cudaVersion = "11.4";
+  jetpackVersion = "6.0";
+  l4tVersion = "36.3.0";
+  cudaVersion = "12.2.1";
+  fvForEKB = "ba d6 6e b4 48 49 83 68 4b 99 2f e5 4a 64 8b b8";
+  fvForSSK = "e4 20 f5 8d 1d ea b5 24 c2 70 d8 d2 3e ca 45 e8";
 
   sourceInfo = import ./sourceinfo {
-    inherit l4tVersion;
+    inherit l4tVersion fvForEKB fvForSSK;
     inherit (prev) lib fetchurl fetchgit;
   };
 in
@@ -25,7 +27,7 @@ in
         # https://repo.download.nvidia.com/jetson/
         src = prev.fetchurl {
           url = with prev.lib.versions; "https://developer.download.nvidia.com/embedded/L4T/r${major l4tVersion}_Release_v${minor l4tVersion}.${patch l4tVersion}/release/Jetson_Linux_R${l4tVersion}_aarch64.tbz2";
-          hash = "sha256-HMB+qUbfBksetda6i8KJ2E5rn0N7X1OOlaDSrmY55gE=";
+          hash = "sha256-tGVlQIMedLkR4lBtLFZ8uxRv3dWUK2dfgML2ENakD0M=";
         };
         # We use a more recent version of bzip2 here because we hit this bug
         # extracting nvidia's archives:
@@ -59,13 +61,13 @@ in
         self.gitRepos
     );
 
-    inherit (prev.callPackages ./pkgs/uefi-firmware { inherit (self) l4tVersion; })
-      edk2-jetson uefi-firmware;
+    uefi-firmware = prev.callPackage ./pkgs/uefi-firmware { inherit (self) l4tVersion; };
 
     inherit (prev.callPackages ./pkgs/optee {
       # Nvidia's recommended toolchain is gcc9:
       # https://nv-tegra.nvidia.com/r/gitweb?p=tegra/optee-src/nv-optee.git;a=blob;f=optee/atf_and_optee_README.txt;h=591edda3d4ec96997e054ebd21fc8326983d3464;hb=5ac2ab218ba9116f1df4a0bb5092b1f6d810e8f7#l33
       stdenv = prev.gcc9Stdenv;
+      inherit fvForEKB fvForSSK;
       inherit (self) bspSrc gitRepos l4tVersion;
     }) buildTOS buildOpteeTaDevKit opteeClient;
     genEkb = self.callPackage ./pkgs/optee/gen-ekb.nix { };
@@ -81,19 +83,15 @@ in
     tegra-eeprom-tool = prev.callPackage ./pkgs/tegra-eeprom-tool { };
     tegra-eeprom-tool-static = prev.pkgsStatic.callPackage ./pkgs/tegra-eeprom-tool { };
 
-    cudaPackages = prev.callPackages ./pkgs/cuda-packages {
-      inherit (self) debs cudaVersion
-        l4t-3d-core
-        l4t-core
-        l4t-cuda
-        l4t-cupva
-        l4t-multimedia;
-      inherit (prev) autoAddDriverRunpath;
-    };
+    # TODO: Commented out to debug jetpack update
+    # cudaPackages = prev.callPackages ./pkgs/cuda-packages {
+    #   inherit (self) debs cudaVersion l4t;
+		#   inherit (prev) autoAddOpenGLRunpathHook;
+    # };
 
     samples = prev.callPackages ./pkgs/samples {
       inherit (self) debs cudaVersion cudaPackages l4t-cuda l4t-multimedia l4t-camera;
-      inherit (prev) autoAddDriverRunpath;
+      inherit (self.cudaPackages) autoAddDriverRunpath;
     };
 
     tests = prev.callPackages ./pkgs/tests { inherit l4tVersion; };
@@ -122,12 +120,13 @@ in
 
     otaUtils = self.callPackage ./pkgs/ota-utils { };
 
-    l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { };
-    genL4tJson = prev.runCommand "l4t.json" { nativeBuildInputs = [ prev.buildPackages.python3 ]; } ''
-      python3 ${./pkgs/containers/gen_l4t_json.py} ${self.l4tCsv} ${self.unpackedDebsFilenames} > $out
-    '';
-    containerDeps = self.callPackage ./pkgs/containers/deps.nix { };
-    nvidia-ctk = self.callPackage ./pkgs/containers/nvidia-ctk.nix { };
+    # TODO: Commented out to debug jetpack update
+    # l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { };
+    # genL4tJson = prev.runCommand "l4t.json" { nativeBuildInputs = [ prev.buildPackages.python3 ]; } ''
+    #   python3 ${./pkgs/containers/gen_l4t_json.py} ${self.l4tCsv} ${self.unpackedDebsFilenames} > $out
+    # '';
+    # containerDeps = self.callPackage ./pkgs/containers/deps.nix { };
+    # nvidia-ctk = self.callPackage ./pkgs/containers/nvidia-ctk.nix { };
 
     # TODO(jared): deprecate this
     devicePkgsFromNixosConfig = config: config.system.build.jetsonDevicePkgs;
