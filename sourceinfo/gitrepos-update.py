@@ -1,16 +1,15 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i python -p python3 nix-prefetch-git
 
-# This script is intended to be run against the source_sync.sh file in the unpacked BSP
-
 import json
 import re
 import subprocess
 import sys
 import os
 
-VERSION = '35.6'
+VERSION = '36.3'
 TAG = 'jetson_' + VERSION
+
 FILENAME = 'r' + VERSION + '-gitrepos.json'
 
 REPOS_TO_SKIP = [
@@ -40,7 +39,8 @@ def main():
     for line in source_info.split('\n'):
         k, relpath, giturl, _ = line.split(':')
 
-        giturl = "https://" + giturl
+        #giturl = "https://" + giturl
+        giturl = "git://" + giturl
 
         if relpath not in data and relpath not in REPOS_TO_SKIP:
             print(f"Checking out {giturl}")
