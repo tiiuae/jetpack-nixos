@@ -216,7 +216,8 @@ in
     hardware.firmware = with pkgs.nvidia-jetpack; [
       l4t-firmware
       l4t-xusb-firmware # usb firmware also present in linux-firmware package, but that package is huge and has much more than needed
-      cudaPackages.vpi2-firmware # Optional, but needed for pva_auth_allowlist firmware file used by VPI2
+			# TODO: Commented out to debug jetpack update
+      # cudaPackages.vpi2-firmware # Optional, but needed for pva_auth_allowlist firmware file used by VPI2
     ];
 
     hardware.deviceTree.enable = true;
@@ -339,29 +340,30 @@ in
       otaUtils # Tools for UEFI capsule updates
     ];
 
-    systemd.services.nvidia-cdi-generate = {
-      enable = nvidiaDockerActive || nvidiaPodmanActive;
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        RuntimeDirectory = "cdi";
-      };
-      wantedBy = [ "multi-user.target" ];
-      script =
-        let
-          exe = lib.getExe pkgs.nvidia-jetpack.nvidia-ctk;
-        in
-        ''
-          ${exe} cdi generate \
-            --nvidia-ctk-path=${exe} \
-            --driver-root=${pkgs.nvidia-jetpack.containerDeps} \
-            --ldconfig-path ${lib.getExe' pkgs.glibc "ldconfig"} \
-            --dev-root=/ \
-            --mode=csv \
-            --csv.file=${pkgs.nvidia-jetpack.l4tCsv} \
-            --output="$RUNTIME_DIRECTORY/jetpack-nixos"
-        '';
-    };
+    # TODO: Commented out to debug jetpack update
+    # systemd.services.nvidia-cdi-generate = {
+    #   enable = nvidiaDockerActive || nvidiaPodmanActive;
+    #   serviceConfig = {
+    #     Type = "oneshot";
+    #     RemainAfterExit = true;
+    #     RuntimeDirectory = "cdi";
+    #   };
+    #   wantedBy = [ "multi-user.target" ];
+    #   script =
+    #     let
+    #       exe = lib.getExe pkgs.nvidia-jetpack.nvidia-ctk;
+    #     in
+    #     ''
+    #       ${exe} cdi generate \
+    #         --nvidia-ctk-path=${exe} \
+    #         --driver-root=${pkgs.nvidia-jetpack.containerDeps} \
+    #         --ldconfig-path ${lib.getExe' pkgs.glibc "ldconfig"} \
+    #         --dev-root=/ \
+    #         --mode=csv \
+    #         --csv.file=${pkgs.nvidia-jetpack.l4tCsv} \
+    #         --output="$RUNTIME_DIRECTORY/jetpack-nixos"
+    #     '';
+    # };
 
     # Used by libEGL_nvidia.so.0
     environment.etc."egl/egl_external_platform.d".source =
