@@ -1,5 +1,5 @@
 let
-  nsight_system_version = "2023.2.4";
+  nsight_system_version = "2022.5.2";
 in
 { lib
 , stdenv
@@ -10,16 +10,12 @@ in
 , dpkg
 , makeWrapper
 , autoPatchelfHook
-, autoAddDriverRunpath
+, autoAddOpenGLRunpathHook
 , symlinkJoin
 , expat
 , pkg-config
 , substituteAll
-, l4t-3d-core
-, l4t-core
-, l4t-cuda
-, l4t-cupva
-, l4t-multimedia
+, l4t
 , zlib
 , qt6
 , xorg
@@ -90,7 +86,7 @@ let
       pname = name;
       inherit version srcs;
 
-      nativeBuildInputs = [ dpkg autoPatchelfHook autoAddDriverRunpath ] ++ nativeBuildInputs;
+      nativeBuildInputs = [ dpkg autoPatchelfHook autoAddOpenGLRunpathHook ] ++ nativeBuildInputs;
       buildInputs = [ stdenv.cc.cc.lib ] ++ buildInputs;
 
       unpackCmd = "for src in $srcs; do dpkg-deb -x $src source; done";
@@ -152,11 +148,7 @@ let
       '';
 
       installPhase = ''
-        runHook preInstall
-
         cp -r . $out
-
-        runHook postInstall
       '';
 
       meta = {
@@ -184,19 +176,7 @@ let
       '';
     };
     cuda_cuobjdump = buildFromSourcePackage { name = "cuda-cuobjdump"; };
-    cuda_cupti = buildFromSourcePackage {
-      name = "cuda-cupti";
-
-      # We append a postFixupHook since we need to have this happen after
-      # autoPatchelfHook, which itself also runs as a postFixupHook.
-      # TODO: Use runtimeDependencies instead
-      preFixup = ''
-        postFixupHooks+=('
-          # dlopen in libcupti.so needs to be able to access these libnvperf_host.so in this directory
-          patchelf --add-rpath $out/lib $(readlink -f $out/lib/libcupti.so)
-        ')
-      '';
-    };
+    cuda_cupti = buildFromSourcePackage { name = "cuda-cupti"; };
     cuda_cuxxfilt = buildFromSourcePackage { name = "cuda-cuxxfilt"; };
     cuda_documentation = buildFromSourcePackage { name = "cuda-documentation"; };
     cuda_gdb = buildFromSourcePackage { name = "cuda-gdb"; buildInputs = [ expat ]; };
@@ -258,7 +238,7 @@ let
     libcusolver = buildFromSourcePackage { name = "libcusolver"; buildInputs = [ cudaPackages.libcublas ]; };
     libcusparse = buildFromSourcePackage { name = "libcusparse"; };
     libnpp = buildFromSourcePackage { name = "libnpp"; };
-    libcudla = buildFromSourcePackage { name = "libcudla"; buildInputs = [ l4t-cuda ]; };
+    libcudla = buildFromSourcePackage { name = "libcudla"; buildInputs = [ l4t.l4t-cuda ]; };
     nsight_compute_target = buildFromDebs {
       name = "nsight-compute-target";
       version = nsight_compute_version;
@@ -472,7 +452,7 @@ let
         version = (lib.head tensorrtDebs).version;
         srcs = builtins.map (deb: deb.src) tensorrtDebs;
 
-        buildInputs = (with cudaPackages; [ cuda_cudart libcublas libcudla cudnn ]) ++ ([ l4t-core l4t-multimedia ]);
+        buildInputs = (with cudaPackages; [ cuda_cudart libcublas libcudla cudnn ]) ++ (with l4t; [ l4t-core l4t-multimedia ]);
         # Remove unnecessary (and large) static libs
         postPatch = ''
           rm -rf lib/*.a
@@ -490,13 +470,16 @@ let
 
     # vpi2
     vpi2 = buildFromDebs {
-      name = "vpi2";
-      version = debs.common.vpi2-dev.version;
-      srcs = [ debs.common.libnvvpi2.src debs.common.vpi2-dev.src ];
-      sourceRoot = "source/opt/nvidia/vpi2";
-      buildInputs = ([ l4t-core l4t-3d-core l4t-multimedia l4t-cupva ])
+      name = "vpi3";
+      version = debs.common.vpi3-dev.version;
+      srcs = [ debs.common.libnvvpi3.src debs.common.vpi3-dev.src ];
+      sourceRoot = "source/opt/nvidia/vpi3";
+      buildInputs = (with l4t; [ l4t-core l4t-3d-core l4t-multimedia l4t-cupva ])
         ++ (with cudaPackages; [ libcufft libnpp ]);
-      patches = [ ./vpi2.patch ];
+      patches = [
+        # TODO PAtch still needed??
+        ./vpi2.patch
+      ];
       postPatch = ''
         rm -rf etc
         substituteInPlace lib/cmake/vpi/vpi-config.cmake --subst-var out
@@ -506,9 +489,9 @@ let
     };
 
     # Needed for vpi2-samples benchmark w/ pva to work
-    vpi2-firmware = runCommand "vpi2-firmware" { nativeBuildInputs = [ dpkg ]; } ''
-      dpkg-deb -x ${debs.common.libnvvpi2.src} source
-      install -D source/opt/nvidia/vpi2/lib64/priv/vpi2_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
+    vpi2-firmware = runCommand "vpi3-firmware" { nativeBuildInputs = [ dpkg ]; } ''
+      dpkg-deb -x ${debs.common.libnvvpi3.src} source
+      install -D source/opt/nvidia/vpi3/lib64/priv/vpi3_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
     '';
   };
 in
