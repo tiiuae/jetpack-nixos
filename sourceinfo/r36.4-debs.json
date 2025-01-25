@@ -220,9 +220,9 @@
       "version": "1.11.1.6-1"
     },
     "holoscan": {
-      "filename": "pool/main/h/holoscan/holoscan_3.1.0.3-1_arm64.deb",
-      "sha256": "92391427eaada1bfc62a390e2372b4a34136a2d99900a294091f896d0831e99e",
-      "version": "3.1.0.3-1"
+      "filename": "pool/main/h/holoscan/holoscan_2.8.0.1-1_arm64.deb",
+      "sha256": "a8f318fa1f303085783b896b299462f7661efe60debb4e4db3f3d77564122bf8",
+      "version": "2.8.0.1-1"
     },
     "libcublas-12-6": {
       "filename": "pool/main/libc/libcublas/libcublas-12-6_12.6.1.4-1_arm64.deb",
