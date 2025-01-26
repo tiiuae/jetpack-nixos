@@ -21,7 +21,6 @@ let
     version = l4tVersion;
     src = nvopteeSrc;
     patches = [
-      ./0001-Don-t-prepend-foo-bar-baz-to-TEEC_LOAD_PATH.patch
       (fetchpatch {
         name = "tee-supplicant-Allow-for-TA-load-path-to-be-specified-at-runtime.patch";
         url = "https://github.com/OP-TEE/optee_client/commit/f3845d8bee3645eedfcc494be4db034c3c69e9ab.patch";
