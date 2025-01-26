@@ -20,15 +20,6 @@ let
     pname = "optee_client";
     version = l4tVersion;
     src = nvopteeSrc;
-    patches = [
-      (fetchpatch {
-        name = "tee-supplicant-Allow-for-TA-load-path-to-be-specified-at-runtime.patch";
-        url = "https://github.com/OP-TEE/optee_client/commit/f3845d8bee3645eedfcc494be4db034c3c69e9ab.patch";
-        stripLen = 1;
-        extraPrefix = "optee/optee_client/";
-        hash = "sha256-XjFpMbyXy74sqnc8l+EgTaPXqwwHcvni1Z68ShokTGc=";
-      })
-    ];
     nativeBuildInputs = [ pkg-config ];
     buildInputs = [ libuuid ];
     enableParallelBuilding = true;
