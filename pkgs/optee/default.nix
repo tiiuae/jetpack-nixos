@@ -1,5 +1,4 @@
-{ l4tMajorMinorPatchVersion
-, l4tAtLeast
+{ l4tVersion
 , bspSrc
 , buildPackages
 , lib
@@ -11,7 +10,6 @@
 , nukeReferences
 , fetchpatch
 , gitRepos
-, uefi-firmware
 }:
 
 let
@@ -20,19 +18,17 @@ let
 
   opteeClient = stdenv.mkDerivation {
     pname = "optee_client";
-    version = l4tMajorMinorPatchVersion;
+    version = l4tVersion;
     src = nvopteeSrc;
-    patches =
-      if l4tAtLeast "36" then [ ] else [
-        ./0001-Don-t-prepend-foo-bar-baz-to-TEEC_LOAD_PATH.patch
-        (fetchpatch {
-          name = "tee-supplicant-Allow-for-TA-load-path-to-be-specified-at-runtime.patch";
-          url = "https://github.com/OP-TEE/optee_client/commit/f3845d8bee3645eedfcc494be4db034c3c69e9ab.patch";
-          stripLen = 1;
-          extraPrefix = "optee/optee_client/";
-          hash = "sha256-XjFpMbyXy74sqnc8l+EgTaPXqwwHcvni1Z68ShokTGc=";
-        })
-      ];
+    patches = [
+      (fetchpatch {
+        name = "tee-supplicant-Allow-for-TA-load-path-to-be-specified-at-runtime.patch";
+        url = "https://github.com/OP-TEE/optee_client/commit/f3845d8bee3645eedfcc494be4db034c3c69e9ab.patch";
+        stripLen = 1;
+        extraPrefix = "optee/optee_client/";
+        hash = "sha256-XjFpMbyXy74sqnc8l+EgTaPXqwwHcvni1Z68ShokTGc=";
+      })
+    ];
     nativeBuildInputs = [ pkg-config ];
     buildInputs = [ libuuid ];
     enableParallelBuilding = true;
@@ -66,16 +62,16 @@ let
         "PLATFORM=tegra"
         "PLATFORM_FLAVOR=${socType}"
         "CFG_WITH_STMM_SP=y"
+        "CFG_STMM_PATH=${bspSrc}/bootloader/standalonemm_optee_${socType}.bin"
         "NV_CCC_PREBUILT=${nvCccPrebuilt}"
         "O=$(out)"
       ]
-      ++ (lib.optional (uefi-firmware != null) "CFG_STMM_PATH=${uefi-firmware}/standalonemm_optee.bin")
       ++ (lib.optional (taPublicKeyFile != null) "TA_PUBLIC_KEY=${taPublicKeyFile}")
       ++ extraMakeFlags;
     in
     stdenv.mkDerivation {
       inherit pname;
-      version = l4tMajorMinorPatchVersion;
+      version = l4tVersion;
       src = nvopteeSrc;
       patches = opteePatches;
       postPatch = ''
@@ -104,7 +100,7 @@ let
 
   buildNvLuksSrv = args: stdenv.mkDerivation {
     pname = "nvluks-srv";
-    version = l4tMajorMinorPatchVersion;
+    version = l4tVersion;
     src = nvopteeSrc;
     patches = [ ./0001-nvoptee-no-install-makefile.patch ./0002-Exit-with-non-zero-status-code-on-TEEC_InvokeCommand.patch ];
     nativeBuildInputs = [ (buildPackages.python3.withPackages (p: [ p.cryptography ])) ];
@@ -127,33 +123,9 @@ let
     meta.platforms = [ "aarch64-linux" ];
   };
 
-  buildCpuBlPayloadDec = args: stdenv.mkDerivation {
-    pname = "cpubl-payload-dec";
-    version = l4tMajorMinorPatchVersion;
-    src = nvopteeSrc;
-    patches = [ ./0001-nvoptee-no-install-makefile.patch ];
-    nativeBuildInputs = [ (buildPackages.python3.withPackages (p: [ p.cryptography ])) ];
-    enableParallelBuilding = true;
-    makeFlags = [
-      "-C optee/samples/cpubl-payload-dec"
-      "CROSS_COMPILE=${stdenv.cc.targetPrefix}"
-      "TA_DEV_KIT_DIR=${buildOpteeTaDevKit args}/export-ta_arm64"
-      "OPTEE_CLIENT_EXPORT=${opteeClient}"
-      "O=$(PWD)/out"
-    ];
-    installPhase = ''
-      runHook preInstall
-
-      install -Dm755 -t $out out/early_ta/cpubl-payload-dec/*.stripped.elf
-
-      runHook postInstall
-    '';
-    meta.platforms = [ "aarch64-linux" ];
-  };
-
   buildHwKeyAgent = args: stdenv.mkDerivation {
     pname = "hwkey-agent";
-    version = l4tMajorMinorPatchVersion;
+    version = l4tVersion;
     src = nvopteeSrc;
     patches = [ ./0001-nvoptee-no-install-makefile.patch ];
     nativeBuildInputs = [ (buildPackages.python3.withPackages (p: [ p.cryptography ])) ];
@@ -190,7 +162,7 @@ let
   buildArmTrustedFirmware = lib.makeOverridable ({ socType, ... }:
     stdenv.mkDerivation {
       pname = "arm-trusted-firmware";
-      version = l4tMajorMinorPatchVersion;
+      version = l4tVersion;
       src = atfSrc;
       makeFlags = [
         "-C arm-trusted-firmware"
@@ -206,9 +178,6 @@ let
         # `warning: /build/source/build/rk3399/release/bl31/bl31.elf has a LOAD segment with RWX permissions`
         # See also: https://developer.trustedfirmware.org/T996
         "LDFLAGS=-no-warn-rwx-segments"
-      ] ++ lib.optionals (l4tAtLeast "36" && socType == "t234") [
-        "BRANCH_PROTECTION=3"
-        "ARM_ARCH_MINOR=3"
       ];
 
       enableParallelBuilding = true;
@@ -232,13 +201,11 @@ let
       opteeDTB = buildOpteeDTB args;
 
       nvLuksSrv = buildNvLuksSrv args;
-      cpuBlPayloadDec = buildCpuBlPayloadDec args;
       hwKeyAgent = buildHwKeyAgent args;
 
       opteeOS = buildOptee ({
         earlyTaPaths = [
           "${nvLuksSrv}/b83d14a8-7128-49df-9624-35f14f65ca6c.stripped.elf"
-          "${cpuBlPayloadDec}/0e35e2c9-b329-4ad9-a2f5-8ca9bbbd7713.stripped.elf"
           "${hwKeyAgent}/82154947-c1bc-4bdf-b89d-04f93c0ea97c.stripped.elf"
         ];
       } // args);
