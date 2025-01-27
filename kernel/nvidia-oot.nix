@@ -12,7 +12,7 @@ let
     hash = "sha256-6U2+ACWuMT7rYDBhaXr+13uWQdKgbfAiiIV0Vi3R9sU=";
   };
 
-  source = runCommand "source" { } ''
+  source = runCommand "nvidia-oot-source" { } ''
     tar xf ${src}
     cd Linux_for_Tegra/source
     mkdir $out
@@ -45,10 +45,9 @@ stdenv.mkDerivation {
   # <make changes>
   # git diff > ../0001-build-fixes.patch
   patches = [
-    ./0001-build-fixes.patch
+    ./0001-nix-build-fixes.patch
     ./0002-downgrade-gcc-14-err-to-warn.patch
-    ./0003-linux-6-6-build-fixes.patch
-  ];
+  ] ++ (lib.optional (kernel.modDirVersion == "6.6.59")  [ ./0003-linux-6-6-build-fixes.patch ] );
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.
