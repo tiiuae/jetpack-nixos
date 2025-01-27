@@ -2,7 +2,18 @@
 , runCommand
 , dpkg
 , debs
+, l4tVersion
 }:
+let
+
+  l4t-file = if l4tVersion == "36.4.3" then
+      ./l4t-r36-4-3.json
+  else if l4tVersion == "35.6.0" then
+      ./l4t-r35-6.json
+  else
+      throw "Not supported l4tVersion version";
+
+  in
 
 runCommand "container-deps" { nativeBuildInputs = [ dpkg ]; }
   (lib.concatStringsSep "\n"
@@ -21,4 +32,4 @@ runCommand "container-deps" { nativeBuildInputs = [ dpkg ]; }
           fi
         '')
         debFiles)))
-      (lib.importJSON ./l4t.json)))
+      (lib.importJSON l4t-file)))
