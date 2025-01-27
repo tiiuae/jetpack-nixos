@@ -122,11 +122,11 @@ in
 
     otaUtils = self.callPackage ./pkgs/ota-utils { };
 
-    l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { };
+    l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { inherit l4tVersion; };
     genL4tJson = prev.runCommand "l4t.json" { nativeBuildInputs = [ prev.buildPackages.python3 ]; } ''
       python3 ${./pkgs/containers/gen_l4t_json.py} ${self.l4tCsv} ${self.unpackedDebsFilenames} > $out
     '';
-    containerDeps = self.callPackage ./pkgs/containers/deps.nix { };
+    containerDeps = self.callPackage ./pkgs/containers/deps.nix { inherit l4tVersion; };
     nvidia-ctk = self.callPackage ./pkgs/containers/nvidia-ctk.nix { };
 
     # TODO(jared): deprecate this

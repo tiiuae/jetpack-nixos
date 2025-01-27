@@ -34,7 +34,7 @@ def main():
             raise Exception(f"Don't know how to handle {fullpath}")
 
         files_needed = []
-        with open(fullpath, "r") as filelist:
+        with open(fullpath, "r", encoding="utf-8", errors="replace") as filelist:
             for debfilename in filelist:
                 # filename, stripped off leading "./"
                 debfilename = debfilename[1:].strip()
