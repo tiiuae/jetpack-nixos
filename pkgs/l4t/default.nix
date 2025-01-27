@@ -370,7 +370,12 @@ let
     buildInputs = [ stdenv.cc.cc.lib l4t-core ];
     postPatch = ''
       # Remove a utility that bring in too many libraries
-      rm bin/nv_macsec_wpa_supplicant
+      ${(if l4tVersion == "36.4.3" then
+        "rm sbin/nv_wpa_supplicant_wifi"
+      else if l4tVersion == "35.6.0" then
+        "rm bin/nv_macsec_wpa_supplicant"
+      else
+        throw "Unsupported l4tVersion")}
 
       # This just contains a symlink to a binary already in /bin (nvcapture-status-decoder)
       rm -rf opt
