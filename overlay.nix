@@ -107,10 +107,14 @@ in
     tests = prev.callPackages ./pkgs/tests { inherit l4tVersion; };
 
     kernelPackagesOverlay = final: prev: {
-      nvidia-oot = self.callPackage ./kernel/nvidia-oot.nix { };
+      # TODO BSP UPDATE: select by BSP or kernel config (move to  kernel/default.nix)
+      # r35.6 uses display driver
+      # r36.4.3 uses nvidia-oot
+      nvidia-modules = self.callPackage ./kernel/nvidia-oot/nvidia-oot.nix { };
     };
 
-    kernel = self.callPackage ./kernel { kernelPatches = [ ]; };
+    # TODO BSP UPDATE: select by BSP or kernel config (move to  kernel/default.nix)
+    kernel = self.callPackage ./kernel/5.15-r36-4-3 { kernelPatches = [ ]; };
     kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
     rtkernel = self.callPackage ./kernel { kernelPatches = [ ]; realtime = true; };

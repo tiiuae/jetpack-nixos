@@ -211,7 +211,7 @@ in
       (
         !cfg.kernel.realtime
       )
-      config.boot.kernelPackages.nvidia-oot;
+      config.boot.kernelPackages.nvidia-modules;
 
     hardware.firmware = with pkgs.nvidia-jetpack; [
       l4t-firmware
