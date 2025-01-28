@@ -45,7 +45,12 @@ let
       perl
     ];
 
-    patches = [ ./flash-tools.patch ];
+    patches = if l4tVersion == "36.4.3" then
+        [ ./flash-tools-r36-4-3.patch ]
+      else if l4tVersion == "35.6.0" then
+        [ ./flash-tools-r35-6-0.patch ]
+      else
+        throw "Unsupported l4tVersion";
 
     postPatch = ''
       # Needed in Jetpack 5
