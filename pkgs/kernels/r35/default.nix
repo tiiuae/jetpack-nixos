@@ -69,7 +69,6 @@ buildLinux (args // {
   # TODO: a future task could be to set this, disable ignoreConfigErrors and add the needed modules to the
   # structuredExtraConfig below.
   #enableCommonConfig = false;
-
   # Using applyPatches here since it's not obvious how to append an extra
   # postPatch. This is not very efficient.
   src = applyPatches {
