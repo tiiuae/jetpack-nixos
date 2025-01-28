@@ -169,6 +169,12 @@ let
         # `warning: /build/source/build/rk3399/release/bl31/bl31.elf has a LOAD segment with RWX permissions`
         # See also: https://developer.trustedfirmware.org/T996
         "LDFLAGS=-no-warn-rwx-segments"
+        "${if (l4tVersion == "36.4.3" && socType == "t234") then
+            "BRANCH_PROTECTION=3 ARM_ARCH_MINOR=3"
+          else if l4tVersion == "35.6.0" then
+            ""
+          else
+            throw "Unsupported l4tVersion"}"
       ];
 
       enableParallelBuilding = true;
