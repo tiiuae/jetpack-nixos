@@ -12,6 +12,14 @@ let
     inherit l4tVersion;
     inherit (prev) lib fetchurl fetchgit;
   };
+
+  uefi-firmware-file = if l4tVersion == "36.4.3" then
+      ./pkgs/uefi-firmware/uefi-firmware-36.4
+  else if l4tVersion == "35.6.0" then
+      ./pkgs/uefi-firmware-35.6/uefi-firmware
+  else
+      throw "Not supported l4tVersion version";
+
 in
 {
   nvidia-jetpack = prev.lib.makeScope prev.newScope (self: ({
@@ -59,8 +67,8 @@ in
         self.gitRepos
     );
 
-    inherit (prev.callPackages ./pkgs/uefi-firmware { inherit (self) l4tVersion; })
-      edk2-jetson uefi-firmware;
+    inherit (prev.callPackages "${uefi-firmware-file}" { inherit (self) l4tVersion; })
+         edk2-jetson uefi-firmware;
 
     inherit (prev.callPackages ./pkgs/optee {
       # Nvidia's recommended toolchain is gcc9:
