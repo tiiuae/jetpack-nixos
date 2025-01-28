@@ -46,7 +46,12 @@ let
       perl
     ];
 
-    patches = [ ./flash-tools-r${lib.versions.major l4tMajorMinorPatchVersion}.patch ];
+    patches = if l4tMajorMinorPatchVersion == "36.4.3" then
+        [ ./flash-tools-r36-4-3.patch ]
+      else if l4tMajorMinorPatchVersion == "35.6.0" then
+        [ ./flash-tools-r35-6-0.patch ]
+      else
+        [ ./flash-tools-r${lib.versions.major l4tMajorMinorPatchVersion}.patch ];
 
     postPatch = ''
       # Needed in Jetpack 5
