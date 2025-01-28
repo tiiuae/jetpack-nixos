@@ -87,6 +87,8 @@ pkgsAarch64.buildLinux (args // {
     # Required by IO base b
     USB_ONBOARD_HUB = no;
 
+     MODVERSIONS = no;
+
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
     # Otherwise, nvidia's driver craps out
     CMA_SIZE_MBYTES = lib.mkForce (freeform "64");

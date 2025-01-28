@@ -152,6 +152,8 @@ buildLinux (args // {
     #USB_XHCI_TEGRA = module;
     USB_XHCI_TEGRA = yes;
 
+    MODVERSIONS = no;
+
     # stage-1 links /lib/firmware to the /nix/store path in the initramfs.
     # However, since it's builtin and not a module, that's too late, since
     # the kernel will have already tried loading!
