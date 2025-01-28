@@ -78,6 +78,15 @@ let
           rm -rf lib/tegra
         fi
 
+        if [[ -d lib/nvidia ]]; then
+          if [[ -z "$( ls -A 'lib/nvidia' )"  ]]; then
+            rm -rf lib/nvidia
+          else
+            mv lib/nvidia/* lib
+            rm -rf lib/nvidia
+          fi
+        fi
+
         ${postPatch}
 
         rm -f lib/ld.so.conf
@@ -158,8 +167,14 @@ let
       postFixupHooks+=('
         patchelf --add-rpath ${lib.makeLibraryPath [ libglvnd ]} \
           $out/lib/libEGL_nvidia.so.0 \
-          $out/lib/libGLX_nvidia.so.0 \
-          $out/lib/libnvidia-vulkan-producer.so
+          $out/lib/libGLX_nvidia.so.0 ${
+            if l4tVersion == "36.4.3" then
+              ""
+            else if l4tVersion == "35.6.0" then
+              "$out/lib/libnvidia-vulkan-producer.so"
+            else
+              throw "Unsupported l4tVersion l4t-3d-core"
+          }
 
         patchelf --add-rpath ${lib.makeLibraryPath (with xorg; [ libX11 libXext libxcb ])} \
           $out/lib/libGLX_nvidia.so.0 \
@@ -179,8 +194,19 @@ let
 
     postPatch =
       let
-        # XXX: Temporary override here since NVIDIA didn't update this for 35.6.0
-        l4tVersion = "35.5.0";
+        ptxjitcomp = if l4tVersion == "36.4.3" then
+            {
+              version = "540.4.0";
+              path = "/usr/lib/aarch64-linux-gnu/nvidia";
+            }
+          else if l4tVersion == "35.6.0" then
+            {
+              # XXX: Temporary override here since NVIDIA didn't update this for 35.6.0
+              version = "35.5.0";
+              path = "/usr/lib/aarch64-linux-gnu/tegra";
+            }
+          else
+             throw "Unsuported l4t-cuda BSP version";
       in
       ''
         # Additional libcuda symlinks
@@ -195,9 +221,9 @@ let
         # well as libnvidia-ptxjitcompiler in the same package. meta-tegra does a
         # similar thing where they pull libnvidia-ptxjitcompiler out of
         # l4t-3d-core and place it in the same package as libcuda.
-        dpkg --fsys-tarfile ${debs.t234.nvidia-l4t-3d-core.src} | tar -xO ./usr/lib/aarch64-linux-gnu/tegra/libnvidia-ptxjitcompiler.so.${l4tVersion} > lib/libnvidia-ptxjitcompiler.so.${l4tVersion}
-        ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so.1
-        ln -sf libnvidia-ptxjitcompiler.so.${l4tVersion} lib/libnvidia-ptxjitcompiler.so
+        dpkg --fsys-tarfile ${debs.t234.nvidia-l4t-3d-core.src} | tar -xO .${ptxjitcomp.path}/libnvidia-ptxjitcompiler.so.${ptxjitcomp.version} > lib/libnvidia-ptxjitcompiler.so.${ptxjitcomp.version}
+        ln -sf libnvidia-ptxjitcompiler.so.${ptxjitcomp.version} lib/libnvidia-ptxjitcompiler.so.1
+        ln -sf libnvidia-ptxjitcompiler.so.${ptxjitcomp.version} lib/libnvidia-ptxjitcompiler.so
       '';
 
     # libcuda.so actually depends on libnvcucompat.so at runtime (probably
