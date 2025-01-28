@@ -66,7 +66,7 @@ else
           repo = "edk2";
           rev = "r${l4tVersion}";
           fetchSubmodules = true;
-          sha256 = "sha256-FmQHcCbSXdeNS1/u5xlhazhP75nRyNuCK1D5AREQsIA=";
+          sha256 = "sha256-TBroMmFyZt6ypooDtSzScjA3POPr76rJKfLQfAkRwdU=";
         }).overrideAttrs
           {
             # Workaround to for unavailable https://github.com/Zeex/subhook
@@ -82,7 +82,7 @@ else
       patches = edk2UefiPatches ++ [
         (fetchpatch {
           name = "CVE-2022-36764.patch";
-          url = "https://bugzilla.tianocore.org/attachment.cgi?id=1436";
+          url = "https://raw.githubusercontent.com/tianocore/user-attachments/147607ddbc1751a297d15e1293cecf4c08037366/tianocore/edk2/BZ-1436-4118.patch";
           hash = "sha256-czku8DgElisDv6minI67nNt6BS+vH6txslZdqiGaQR4=";
           excludes = [
             "SecurityPkg/Test/SecurityPkgHostTest.dsc"
@@ -114,7 +114,7 @@ else
         owner = "NVIDIA";
         repo = "edk2-nvidia";
         rev = "r${l4tVersion}";
-        sha256 = "sha256-LaSko7jCgrM3nbDnzF4yCoSXFnFq4OeHTCeprf4VgjI=";
+        sha256 = "sha256-Ri+0vrxvd7eE7TP/KBM0ET2jX0fupdC3+Dli+IshUP8=";
       };
       patches = edk2NvidiaPatches ++ [
         # Fix Eqos driver to use correct TX clock name
@@ -148,7 +148,7 @@ else
       owner = "NVIDIA";
       repo = "edk2-nvidia-non-osi";
       rev = "r${l4tVersion}";
-      sha256 = "sha256-aoOTjoL33s57lBd6VfKXmlJnTg26+vD8JNToYBTaJ6w=";
+      sha256 = "sha256-qQs1jO/h6+j9WLfz1OtYpgZutEeX284BlcUKJWvghEE=";
     };
 
     edk2-open-gpu-kernel-modules = fetchFromGitHub {

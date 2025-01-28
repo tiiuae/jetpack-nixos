@@ -21,7 +21,7 @@ buildPythonPackage rec {
     owner = "tianocore";
     repo = "edk2-pytool-extensions";
     rev = "refs/tags/v${version}";
-    hash = "sha256-VmYCiqQrznjg1uP31MWO70cnh4EiNdxLENBpA0dUGu8=";
+    hash = "sha256-NuAuXmdcRjROV+az4Oji+PpZDawMt2LSwubJ7ldgYiI=";
   };
 
   patches = [

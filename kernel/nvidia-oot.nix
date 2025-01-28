@@ -9,7 +9,7 @@
 let
   src = fetchurl {
     url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
-    hash = "sha256-6U2+ACWuMT7rYDBhaXr+13uWQdKgbfAiiIV0Vi3R9sU=";
+    hash = "sha256-GQ9Jn1z/JvYqkR0lqOTDhNthOhiHy84XvL5YEL4PNsk=";
   };
 
   source = runCommand "nvidia-oot-source" { } ''
