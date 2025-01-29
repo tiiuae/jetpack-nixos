@@ -213,6 +213,8 @@ in
       )
       config.boot.kernelPackages.nvidia-oot;
 
+    # TODO BSP UPDATE: Add check for bsp
+    hardware.firmwareCompression = lib.mkForce "none";
     hardware.firmware = with pkgs.nvidia-jetpack; [
       l4t-firmware
       l4t-xusb-firmware # usb firmware also present in linux-firmware package, but that package is huge and has much more than needed
