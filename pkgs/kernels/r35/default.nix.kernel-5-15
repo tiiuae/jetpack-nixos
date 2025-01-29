@@ -18,8 +18,8 @@ let
   pkgsAarch64 = if isNative then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
 
   src = fetchurl {
-    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
-    hash = "sha256-GQ9Jn1z/JvYqkR0lqOTDhNthOhiHy84XvL5YEL4PNsk=";
+    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/sources/public_sources.tbz2";
+    hash = "sha256-LBd4BGeePtZQ2r7G+pWDiFeYlvFwVwxhcaG2w4ZmkhY=";
   };
 
   source = runCommand "source-kernel" { } ''
