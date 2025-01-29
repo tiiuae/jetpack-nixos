@@ -36,7 +36,7 @@ in
 pkgsAarch64.buildLinux (
   args
   // {
-    version = "5.15.136" + lib.optionalString realtime "-rt70";
+    version = "5.15.148" + lib.optionalString realtime "-rt70";
     extraMeta.branch = "5.15";
 
     defconfig = "defconfig";
