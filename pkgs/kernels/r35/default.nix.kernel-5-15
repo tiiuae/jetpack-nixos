@@ -72,10 +72,6 @@ pkgsAarch64.buildLinux (
     structuredExtraConfig =
       with lib.kernel;
       {
-        # TODO: NVIDIA-OOT compile fails if wlan is enabled
-        # Issue is with NIX and not with nvidia bsp
-        WLAN = no;
-
         # Following modules need for iso_minimal
         ISO9660 = module;
         USB_UAS = yes;
