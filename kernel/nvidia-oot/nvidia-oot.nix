@@ -18,6 +18,8 @@ let
     mkdir $out
     tar -C $out -xf kernel_oot_modules_src.tbz2
     tar -C $out -xf nvidia_kernel_display_driver_source.tbz2
+
+    rm $out/nvidia-oot/drivers/net/wireless/realtek/rtl8822ce/include/linux/wireless.h
   '';
 
   # unclear why we need this, but some part of nvidia's conftest doesn't pick up the headers otherwise
@@ -80,7 +82,8 @@ stdenv.mkDerivation {
 
   # unclear why we need to add nvidia-oot/sound/soc/tegra-virt-alt/include
   # this only happens in the nix-sandbox and not in the nix-shell
-  NIX_CFLAGS_COMPILE = "-fno-stack-protector -Wno-error=attribute-warning -I ${source}/nvidia-oot/sound/soc/tegra-virt-alt/include ${
+  NIX_CFLAGS_COMPILE = "-fno-stack-protector -Wno-error=attribute-warning -Wno-address
+    -I ${source}/nvidia-oot/sound/soc/tegra-virt-alt/include ${
     lib.concatMapStrings (x: "-isystem ${x} ") (kernelIncludes kernel.dev)
   }";
 
