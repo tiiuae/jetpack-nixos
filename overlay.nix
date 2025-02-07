@@ -101,18 +101,18 @@ in
 
     kernelPackagesOverlay = final: prev: {
       nvidia-modules = if l4tVersion == "36.4.3" then
-          self.callPackage ./kernel/nvidia-oot/nvidia-oot.nix { }
+          final.callPackage ./kernel/nvidia-oot/nvidia-oot.nix {inherit (self) gitRepos l4tVersion; }
         else if l4tVersion == "35.6.0" then
-           self.callPackage ./kernel/display-driver/display-driver.nix { }
+           final.callPackage ./kernel/display-driver/display-driver.nix {inherit (self) gitRepos l4tVersion; }
         else
           throw "Not supported l4tVersion version";
     };
 
     kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; };
-    kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
+    kernelPackages = (final.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
     rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; realtime = true; };
-    rtkernelPackages = (prev.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
+    rtkernelPackages = (final.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 
     nxJetsonBenchmarks = self.callPackage ./pkgs/jetson-benchmarks {
       targetSom = "nx";
