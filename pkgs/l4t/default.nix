@@ -438,6 +438,9 @@ let
       else
         throw "Unsupported l4tVersion")}
 
+      # sbin/wpa_supplicant is symlink to bin/*wpa_supplicant*
+      rm  sbin/wpa_supplicant
+
       # This just contains a symlink to a binary already in /bin (nvcapture-status-decoder)
       rm -rf opt
     '';
