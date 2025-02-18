@@ -80,6 +80,11 @@ pkgsAarch64.buildLinux (
         # Required by IO base b
         USB_ONBOARD_HUB = no;
 
+        # Orin-agx requires usb hub drivers if rootfs is boot from USB.
+        TYPEC = yes;
+        TYPEC_UCSI = yes;
+        UCSI_CCG = yes;
+
         # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
         # Otherwise, nvidia's driver craps out
         CMA_SIZE_MBYTES = lib.mkForce (freeform "64");
