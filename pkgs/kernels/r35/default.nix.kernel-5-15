@@ -107,6 +107,9 @@ pkgsAarch64.buildLinux (
         IP6_NF_MATCH_RPFILTER = module;
         IP6_NF_MATCH_RT = module;
         IP6_NF_MATCH_SRH = module;
+        # Allow matching by class and corresponding ip4 config (RPFILTER)
+        NETFILTER_XT_MATCH_PKTTYPE = module;
+        IP_NF_MATCH_RPFILTER = module;
 
         # Needed since mdadm stuff is currently unconditionally included in the initrd
         # This will hopefully get changed, see: https://github.com/NixOS/nixpkgs/pull/183314
