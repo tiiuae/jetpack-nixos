@@ -87,7 +87,7 @@ pkgsAarch64.buildLinux (
 
         # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
         # Otherwise, nvidia's driver craps out
-        CMA_SIZE_MBYTES = lib.mkForce (freeform "64");
+        CMA_SIZE_MBYTES = lib.mkForce (freeform "128");
 
         ### So nat.service and firewall work ###
         NF_TABLES = module; # This one should probably be in common-config.nix
