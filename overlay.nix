@@ -100,18 +100,17 @@ in
     tests = prev.callPackages ./pkgs/tests { inherit l4tVersion; };
 
     kernelPackagesOverlay = final: prev: {
-      nvidia-modules = if l4tVersion == "36.4.3" then
-          self.callPackage ./kernel/nvidia-oot/nvidia-oot.nix { }
-        else if l4tVersion == "35.6.0" then
-           self.callPackage ./kernel/display-driver/display-driver.nix { }
-        else
-          throw "Not supported l4tVersion version";
+      # TODO BSP UPDATE: select by BSP or kernel config (move to  kernel/default.nix)
+      # r35.6 uses display driver
+      # r36.4.3 uses nvidia-oot
+      nvidia-modules = self.callPackage ./kernel/nvidia-oot/nvidia-oot.nix { };
     };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; };
+    # TODO BSP UPDATE: select by BSP or kernel config (move to  kernel/default.nix)
+    kernel = self.callPackage ./kernel/5.15-r36-4-3 { kernelPatches = [ ]; };
     kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
-    rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; realtime = true; };
+    rtkernel = self.callPackage ./kernel { kernelPatches = [ ]; realtime = true; };
     rtkernelPackages = (prev.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 
     nxJetsonBenchmarks = self.callPackage ./pkgs/jetson-benchmarks {
