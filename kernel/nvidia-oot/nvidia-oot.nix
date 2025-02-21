@@ -4,12 +4,9 @@
   runCommand,
   fetchurl,
   lib,
-  buildPackages,
-  gitRepos,
-  l4tVersion
+  buildPackages
 }:
 let
-  #TODO: should this be in the repos file
   src = fetchurl {
     url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
     hash = "sha256-GQ9Jn1z/JvYqkR0lqOTDhNthOhiHy84XvL5YEL4PNsk=";
@@ -52,7 +49,7 @@ stdenv.mkDerivation {
   patches = [
     ./0001-nix-build-fixes.patch
     ./0002-downgrade-gcc-14-err-to-warn.patch
-  ] ++ (lib.optional (kernel.modDirVersion == "6.6.59") [ ./0003-linux-6-6-build-fixes.patch ]);
+  ] ++ (lib.optional (kernel.modDirVersion == "6.6.59")  [ ./0003-linux-6-6-build-fixes.patch ] );
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.
@@ -87,8 +84,8 @@ stdenv.mkDerivation {
   # this only happens in the nix-sandbox and not in the nix-shell
   NIX_CFLAGS_COMPILE = "-fno-stack-protector -Wno-error=attribute-warning -Wno-address
     -I ${source}/nvidia-oot/sound/soc/tegra-virt-alt/include ${
-        lib.concatMapStrings (x: "-isystem ${x} ") (kernelIncludes kernel.dev)
-      }";
+    lib.concatMapStrings (x: "-isystem ${x} ") (kernelIncludes kernel.dev)
+  }";
 
   installTargets = [ "modules_install" ];
 }
