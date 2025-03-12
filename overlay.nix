@@ -108,7 +108,7 @@ in
           throw "Not supported l4tVersion version";
     };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; };
+    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; kernelPatches = []; };
     kernelPackages = (final.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
     rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; realtime = true; };
