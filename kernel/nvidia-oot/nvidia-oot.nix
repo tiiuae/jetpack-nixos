@@ -9,11 +9,13 @@
   l4tVersion
 }:
 let
-  #TODO: should this be in the repos file
-  src = fetchurl {
-    url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v3.0/sources/public_sources.tbz2";
-    hash = "sha256-GQ9Jn1z/JvYqkR0lqOTDhNthOhiHy84XvL5YEL4PNsk=";
-  };
+  src = if l4tVersion == "36.4.3" then
+    fetchurl {
+      url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/sources/public_sources.tbz2";
+      hash = "sha256-LBd4BGeePtZQ2r7G+pWDiFeYlvFwVwxhcaG2w4ZmkhY=";
+    }
+  else
+    throw "Not supported l4tVersion version";
 
   source = runCommand "nvidia-oot-source" { } ''
     tar xf ${src}
@@ -52,7 +54,7 @@ stdenv.mkDerivation {
   patches = [
     ./0001-nix-build-fixes.patch
     ./0002-downgrade-gcc-14-err-to-warn.patch
-  ] ++ (lib.optional (kernel.modDirVersion == "6.6.59") [ ./0003-linux-6-6-build-fixes.patch ]);
+  ] ++ (lib.optional (kernel.modDirVersion == "6.6.75") [ ./0003-linux-6-6-build-fixes.patch ]);
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.
