@@ -83,10 +83,33 @@ in
         type = types.enum [
           "generic"
           "devkit"
+          "io-base-b-devkit" # Waveshare Jetson xavier io base b
         ];
         default = "generic";
         description = ''
           Jetson carrier board to target. Can be set to "generic" to target a generic jetson carrier board, but some things may not work.
+        '';
+      };
+
+      jetpackVersion = mkOption {
+        type = types.enum [
+          "jp5-1-4"
+          "jp6-2"
+        ];
+        default = "jp5-1-4";
+        description = ''
+          Jetpack Version
+        '';
+      };
+
+      kernelVersion = mkOption {
+        type = types.enum [
+          "jpBSPKernel"
+          "upstreamKernel6-6"
+        ];
+        default = "jpBSPKernel";
+        description = ''
+          Kernel version
         '';
       };
 
