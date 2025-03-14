@@ -202,12 +202,13 @@ let
           else if l4tVersion == "35.6.0" then
             {
               # XXX: Temporary override here since NVIDIA didn't update this for 35.6.0
-              version = "35.5.0";
+              version = "35.6.2";
               path = "/usr/lib/aarch64-linux-gnu/tegra";
             }
           else
              throw "Unsuported l4t-cuda BSP version";
       in
+
       ''
         # Additional libcuda symlinks
         ln -sf libcuda.so.1.1 lib/libcuda.so.1
