@@ -39,30 +39,24 @@
           let
             supportedConfigurations = lib.listToAttrs (map
               (c: {
-                name = "${c.som}-${c.jetpackVersion}-${c.kernelVersion}-${c.carrierBoard}";
+                name = "${c.som}-${c.carrierBoard}";
                 value = c;
               }) [
-              { som = "orin-agx"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "orin-agx"; jetpackVersion = "jp6-2"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "orin-agx"; jetpackVersion = "jp6-2"; kernelVersion = "upstreamKernel6-6"; carrierBoard = "devkit"; }
-              { som = "orin-agx-industrial"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "orin-nx"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "orin-nx"; jetpackVersion = "jp6-2"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "orin-nx"; jetpackVersion = "jp6-2"; kernelVersion = "upstreamKernel6-6"; carrierBoard = "devkit"; }
-              { som = "orin-nx"; jetpackVersion = "jp6-2"; kernelVersion = "jpBSPKernel"; carrierBoard = "io-base-b-devkit"; }
-              { som = "orin-nx"; jetpackVersion = "jp6-2"; kernelVersion = "upstreamKernel6-6"; carrierBoard = "io-base-b-devkit"; }
-              { som = "orin-nano"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "xavier-agx"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "xavier-agx-industrial"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; } # TODO: Entirely untested
-              { som = "xavier-nx"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
-              { som = "xavier-nx-emmc"; jetpackVersion = "jp5-1-4"; kernelVersion = "jpBSPKernel"; carrierBoard = "devkit"; }
+              { som = "orin-agx"; carrierBoard = "devkit"; }
+              { som = "orin-agx-industrial"; carrierBoard = "devkit"; }
+              { som = "orin-nx"; carrierBoard = "devkit"; }
+              { som = "orin-nano"; carrierBoard = "devkit"; }
+              { som = "xavier-agx"; carrierBoard = "devkit"; }
+              { som = "xavier-agx-industrial"; carrierBoard = "devkit"; } # TODO: Entirely untested
+              { som = "xavier-nx"; carrierBoard = "devkit"; }
+              { som = "xavier-nx-emmc"; carrierBoard = "devkit"; }
             ]);
 
             supportedNixOSConfigurations = lib.mapAttrs
               (n: c: (nixpkgs.legacyPackages.x86_64-linux.pkgsCross.aarch64-multiplatform.nixos {
                 imports = [ self.nixosModules.default ];
                 hardware.nvidia-jetpack = { enable = true; } // c;
-                networking.hostName = "${c.som}-${c.jetpackVersion}-${c.kernelVersion}-${c.carrierBoard}"; # Just so it sets the flash binary name.
+                networking.hostName = "${c.som}-${c.carrierBoard}"; # Just so it sets the flash binary name.
               }).config)
               supportedConfigurations;
 

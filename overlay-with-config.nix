@@ -22,20 +22,6 @@ final: prev: (
   in
   {
     nvidia-jetpack = prev.nvidia-jetpack.overrideScope (finalJetpack: prevJetpack: {
-
-      kernelVersion = cfg.kernelVersion;
-      jetpackVersion =
-        if cfg.jetpackVersion == "jp5-1-4" then "5.1.4"
-        else if cfg.jetpackVersion == "jp6-2" then "6.2"
-        else throw "unsupported jetpackVersion";
-      l4tVersion = if cfg.jetpackVersion == "jp5-1-4" then "35.6.0"
-        else if cfg.jetpackVersion == "jp6-2" then "36.4.3"
-        else throw "unsupported jetpackVersion";
-      cudaVersion =
-        if cfg.jetpackVersion == "jp5-1-4" then "11.4"
-        else if cfg.jetpackVersion == "jp6-2" then "12.6"
-        else throw "unsupported jetpackVersion";
-
       socType =
         if cfg.som == null then null
         else if lib.hasPrefix "orin-" cfg.som then "t234"

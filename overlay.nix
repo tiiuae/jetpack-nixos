@@ -4,42 +4,30 @@
 
 final: prev:
 let
-  sourceInfo35-6 = import ./sourceinfo {
-    l4tVersion = "35.6.0";
+  jetpackVersion = "6.2";
+  l4tVersion = "36.4.3";
+  cudaVersion = "12.6";
+
+  sourceInfo = import ./sourceinfo {
+    inherit l4tVersion;
     inherit (prev) lib fetchurl fetchgit;
   };
 
-  sourceInfo36-4-3 = import ./sourceinfo {
-    l4tVersion = "36.4.3";
-    inherit (prev) lib fetchurl fetchgit;
-  };
 in
 {
   nvidia-jetpack = prev.lib.makeScope prev.newScope (self: ({
-    inherit (if self.l4tVersion == "35.6.0" then
-        sourceInfo35-6
-      else if self.l4tVersion == "36.4.3" then
-        sourceInfo36-4-3
-      else throw "Unsupported bspsrc l4tVersion"
-    ) debs gitRepos;
+    inherit jetpackVersion l4tVersion cudaVersion;
 
-    bspSrc = prev.runCommand "l4t-unpacked-${(self.l4tVersion)}"
+    inherit (sourceInfo) debs gitRepos;
+
+    bspSrc = prev.runCommand "l4t-unpacked"
       {
         # https://developer.nvidia.com/embedded/jetson-linux-archive
         # https://repo.download.nvidia.com/jetson/
-        src = prev.fetchurl (
-           if self.l4tVersion == "35.6.0" then
-            {
-              url = "https://developer.nvidia.com/downloads/embedded/l4t/r35_release_v6.0/release/jetson_linux_r35.6.0_aarch64.tbz2";
-              hash = "sha256-HMB+qUbfBksetda6i8KJ2E5rn0N7X1OOlaDSrmY55gE=";
-            }
-           else if self.l4tVersion == "36.4.3" then
-             {
-               url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Jetson_Linux_r36.4.3_aarch64.tbz2";
-               hash = "sha256-lJpEBJxM5qjv31cuoIIMh09u5dQco+STW58OONEYc9I=";
-             }
-           else throw "Unsupported bspsrc l4tVersion"
-        );
+        src = prev.fetchurl {
+          url = with prev.lib.versions; "https://developer.download.nvidia.com/embedded/L4T/r${major l4tVersion}_Release_v${minor l4tVersion}.${patch l4tVersion}/release/Jetson_Linux_R${l4tVersion}_aarch64.tbz2";
+          hash = "sha256-lJpEBJxM5qjv31cuoIIMh09u5dQco+STW58OONEYc9I=";
+        };
         # We use a more recent version of bzip2 here because we hit this bug
         # extracting nvidia's archives:
         # https://bugs.launchpad.net/ubuntu/+source/bzip2/+bug/1834494
@@ -50,20 +38,20 @@ in
     '';
 
     # Here for convenience, to see what is in upstream Jetpack
-    unpackedDebs = prev.runCommand "unpackedDebs-${self.l4tVersion}" { nativeBuildInputs = [ prev.buildPackages.dpkg ]; } ''
+    unpackedDebs = prev.runCommand "unpackedDebs-${l4tVersion}" { nativeBuildInputs = [ prev.buildPackages.dpkg ]; } ''
       mkdir -p $out
       ${prev.lib.concatStringsSep "\n" (prev.lib.mapAttrsToList (n: p: "echo Unpacking ${n}; dpkg -x ${p.src} $out/${n}") self.debs.common)}
       ${prev.lib.concatStringsSep "\n" (prev.lib.mapAttrsToList (n: p: "echo Unpacking ${n}; dpkg -x ${p.src} $out/${n}") self.debs.t234)}
     '';
 
     # Also just for convenience,
-    unpackedDebsFilenames = prev.runCommand "unpackedDebsFilenames-${self.l4tVersion}" { nativeBuildInputs = [ prev.buildPackages.dpkg ]; } ''
+    unpackedDebsFilenames = prev.runCommand "unpackedDebsFilenames-${l4tVersion}" { nativeBuildInputs = [ prev.buildPackages.dpkg ]; } ''
       mkdir -p $out
       ${prev.lib.concatStringsSep "\n" (prev.lib.mapAttrsToList (n: p: "echo Extracting file list from ${n}; dpkg --fsys-tarfile ${p.src} | tar --list > $out/${n}") self.debs.common)}
       ${prev.lib.concatStringsSep "\n" (prev.lib.mapAttrsToList (n: p: "echo Extracting file list from ${n}; dpkg --fsys-tarfile ${p.src} | tar --list > $out/${n}") self.debs.t234)}
     '';
 
-    unpackedGitRepos = prev.runCommand "unpackedGitRepos-${self.l4tVersion}" { } (
+    unpackedGitRepos = prev.runCommand "unpackedGitRepos-${l4tVersion}" { } (
       prev.lib.mapAttrsToList
         (relpath: repo: ''
           mkdir -p $out/${relpath}
@@ -109,18 +97,18 @@ in
       inherit (prev) autoAddDriverRunpath;
     };
 
-    tests = prev.callPackages ./pkgs/tests { inherit (self) l4tVersion; };
+    tests = prev.callPackages ./pkgs/tests { inherit l4tVersion; };
 
     kernelPackagesOverlay = final: prev: {
-      nvidia-modules = if self.l4tVersion == "36.4.3" then
+      nvidia-modules = if l4tVersion == "36.4.3" then
           final.callPackage ./kernel/nvidia-oot/nvidia-oot.nix {inherit (self) gitRepos l4tVersion; }
-        else if self.l4tVersion == "35.6.0" then
+        else if l4tVersion == "35.6.0" then
            final.callPackage ./kernel/display-driver/display-driver.nix {inherit (self) gitRepos l4tVersion; }
         else
           throw "Not supported l4tVersion version";
     };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = []; };
+    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; kernelPatches = []; };
     kernelPackages = (final.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
     rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; realtime = true; };
@@ -140,22 +128,17 @@ in
 
     otaUtils = self.callPackage ./pkgs/ota-utils { };
 
-    l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { inherit (self) l4tVersion; };
+    l4tCsv = self.callPackage ./pkgs/containers/l4t-csv.nix { inherit l4tVersion; };
     genL4tJson = prev.runCommand "l4t.json" { nativeBuildInputs = [ prev.buildPackages.python3 ]; } ''
       python3 ${./pkgs/containers/gen_l4t_json.py} ${self.l4tCsv} ${self.unpackedDebsFilenames} > $out
     '';
-    containerDeps = self.callPackage ./pkgs/containers/deps.nix { inherit (self) l4tVersion; };
+    containerDeps = self.callPackage ./pkgs/containers/deps.nix { inherit l4tVersion; };
     nvidia-ctk = self.callPackage ./pkgs/containers/nvidia-ctk.nix { };
 
     # TODO(jared): deprecate this
     devicePkgsFromNixosConfig = config: config.system.build.jetsonDevicePkgs;
   } // (prev.callPackages ./pkgs/l4t {
-    inherit (self) l4tVersion;
-    inherit (if self.l4tVersion == "35.6.0" then
-        sourceInfo35-6
-      else if self.l4tVersion == "36.4.3" then
-        sourceInfo36-4-3
-      else throw "Unsupported bspsrc l4tVersion"
-    ) debs;
+    inherit l4tVersion;
+    inherit (sourceInfo) debs;
   })));
 }

@@ -57,7 +57,7 @@ in
     # Set fan control service if we have a config for it
     services.nvfancontrol.configFile = mkIf (nvfancontrolConf ? "${cfg.som}") (mkDefault nvfancontrolConf.${cfg.som});
     # Enable the fan control service if it's a devkit
-    services.nvfancontrol.enable = mkIf (cfg.carrierBoard == "devkit" || cfg.carrierBoard == "io-base-b-devkit") (mkDefault true);
+    services.nvfancontrol.enable = mkIf (cfg.carrierBoard == "devkit") (mkDefault true);
 
     hardware.nvidia-jetpack.flashScriptOverrides =
       let
@@ -124,11 +124,9 @@ in
         })
 
         (mkIf (cfg.som == "orin-nx" || cfg.som == "orin-nano") {
+          targetBoard = mkDefault "jetson-orin-nano-devkit";
           # Use this instead if you want to use the original Xavier NX Devkit module (p3509-a02)
-          targetBoard = lib.debug.traceVal (if cfg.carrierBoard == "devkit" then
-            mkDefault "jetson-orin-nano-devkit"
-          else
-            mkDefault "p3509-a02-p3767-0000.conf");
+          #targetBoard = mkDefault "p3509-a02+p3767-0000";
 
 
           # TODO BSP UPDATE: select path by l4tVersion
