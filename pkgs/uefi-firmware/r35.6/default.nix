@@ -46,35 +46,31 @@ let
   ###
 
   # See: https://github.com/NVIDIA/edk2-edkrepo-manifest/blob/main/edk2-nvidia/Jetson/NVIDIAJetsonManifest.xml
-  edk2-src = applyPatches {
-    src = fetchFromGitHub {
-      owner = "NVIDIA";
-      repo = "edk2";
-      rev = "r${l4tVersion}-edk2-stable202208";
-      fetchSubmodules = true;
-      sha256 = "sha256-w+rZq7Wjni62MJds6QmqpLod+zSFZ/qAN7kRDOit+jo=";
-    };
-    patches = [
-      # Fix GCC 14 compile issue.
-      # PR: https://github.com/tianocore/edk2/pull/5781
-      (fetchpatch {
-        url = "https://github.com/NVIDIA/edk2/commit/57a890fd03356350a1b7a2a0064c8118f44e9958.patch";
-        hash = "sha256-on+yJOlH9B2cD1CS9b8Pmg99pzrlrZT6/n4qPHAbDcA=";
-      })
-    ];
+  edk2-src = fetchFromGitHub {
+    owner = "NVIDIA";
+    repo = "edk2";
+    # No 35.6.1 tag as of 2025-03-28
+    #rev = "r${l4tVersion}-edk2-stable202208";
+    rev = "r35.6.0-edk2-stable202208";
+    fetchSubmodules = true;
+    sha256 = "sha256-w+rZq7Wjni62MJds6QmqpLod+zSFZ/qAN7kRDOit+jo=";
   };
 
   edk2-platforms = fetchFromGitHub {
     owner = "NVIDIA";
     repo = "edk2-platforms";
-    rev = "r${l4tVersion}-upstream-20220830";
+    # No 35.6.1 tag as of 2025-03-28
+    #rev = "r${l4tVersion}-upstream-20220830";
+    rev = "r35.6.0-upstream-20220830";
     sha256 = "sha256-PjAJEbbswOLYupMg/xEqkAOJuAC8SxNsQlb9YBswRfo=";
   };
 
   edk2-non-osi = fetchFromGitHub {
     owner = "NVIDIA";
     repo = "edk2-non-osi";
-    rev = "r${l4tVersion}-upstream-20220830";
+    # No 35.6.1 tag as of 2025-03-28
+    #rev = "r${l4tVersion}-upstream-20220830";
+    rev = "r35.6.0-upstream-20220830";
     sha256 = "sha256-EPtI63jYhEIo4uVTH3lUt9NC/lK5vPVacUAc5qgmz9M=";
   };
 
@@ -82,8 +78,10 @@ let
     src = fetchFromGitHub {
       owner = "NVIDIA";
       repo = "edk2-nvidia";
-      rev = "c101ba515b2737fb78d8929c2852f5c8f9607330"; # Latest on r${l4tVersion}-updates branch as of 2024-01-15
-      sha256 = "sha256-Ofj1FS1wLTLf6rCCPbB841SSBM3wjW4tdUJD6cY0ixE=";
+      # No 35.6.1 tag as of 2025-03-28
+      # rev = "r${l4tVersion}";
+      rev = "uefi-202210.6";
+      sha256 = "sha256-ldPKOSdk/1XWiK13/dpUJO6H2v7dqC/Th9hhpNFCct0=";
     };
     patches = edk2NvidiaPatches ++ [
       # Fix Eqos driver to use correct TX clock name
@@ -99,15 +97,6 @@ let
       # using one from the kernel-dtb partition.
       # See: https://github.com/anduril/jetpack-nixos/pull/18
       ./edk2-uefi-dtb.patch
-
-      # Include patches to fix "Assertion 3" mentioned here:
-      # https://forums.developer.nvidia.com/t/assertion-issue-in-uefi-during-boot/315628
-      # From this PR: https://github.com/NVIDIA/edk2-nvidia/pull/110
-      # It is unclear if it does (as of 2025-01-03), but hopefully this also
-      # resolves the critical issue mentioned here:
-      # https://forums.developer.nvidia.com/t/possible-uefi-memory-leak-and-partition-full/308540
-      ./fix-bug-in-block-erase-logic.patch
-      ./fix-variant-read-records-per-erase-block-and-fix-leak.patch
     ];
     postPatch = lib.optionalString errorLevelInfo ''
       sed -i 's#PcdDebugPrintErrorLevel|.*#PcdDebugPrintErrorLevel|0x8000004F#' Platform/NVIDIA/NVIDIA.common.dsc.inc
@@ -121,8 +110,10 @@ let
   edk2-nvidia-non-osi = fetchFromGitHub {
     owner = "NVIDIA";
     repo = "edk2-nvidia-non-osi";
-    rev = "r${l4tVersion}";
-    sha256 = "sha256-Fg8s9Fjwt5IzrGdJ7TKI3AjZLh/wHN8oyvi5Xw+Jg+k=";
+    # No 35.6.1 tag as of 2025-03-28
+    # rev = "r${l4tVersion}";
+    rev = "uefi-202210.6";
+    sha256 = "sha256-Pdsxxo+KdXa1lE/RqFBQ20VzNrvLghatT3phQz+hPQI=";
   };
 
   edk2-jetson = edk2.overrideAttrs (prev: {
