@@ -18,7 +18,7 @@ let
   pkgsAarch64 = if isNative then pkgs else pkgs.pkgsCross.aarch64-multiplatform;
 in
 pkgsAarch64.buildLinux (args // {
-  version = "6.6.59" + lib.optionalString realtime "-rt96";
+  version = "6.6.75" + lib.optionalString realtime "-rt96";
   extraMeta.branch = "6.6";
 
   ignoreConfigErrors = true;
@@ -30,8 +30,8 @@ pkgsAarch64.buildLinux (args // {
   src = applyPatches {
     src = fetchgit {
       url = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git";
-      hash = "sha256-SSTZ5I+zhO3horHy9ISSXQdeIWrkkU5uMlbQVnB5zxY=";
-      rev = "bf3af7e92bda9f48085b7741e657eeb387a61644";
+      hash = "sha256-1m3vRZvfIgPtoyelnFy2tPfYFHa4k3KxGC30ue5p6p4=";
+      rev = "d51b7d37f14e76db7a1a13046ed87198c0407fcb";
     };
 
     patches = [
@@ -115,7 +115,10 @@ pkgsAarch64.buildLinux (args // {
     # Required by IO base b
     USB_ONBOARD_HUB = no;
 
-    # TODO: Are below options still needed??
+    # Orin-agx requires usb hub drivers if rootfs is boot from USB.
+    TYPEC = yes;
+    TYPEC_UCSI = yes;
+    UCSI_CCG = yes;
 
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
     # Otherwise, nvidia's driver craps out
@@ -140,6 +143,9 @@ pkgsAarch64.buildLinux (args // {
     IP6_NF_MATCH_RPFILTER = module;
     IP6_NF_MATCH_RT = module;
     IP6_NF_MATCH_SRH = module;
+    # Allow matching by class and corresponding ip4 config (RPFILTER)
+    NETFILTER_XT_MATCH_PKTTYPE = module;
+    IP_NF_MATCH_RPFILTER = module;
 
     # Needed since mdadm stuff is currently unconditionally included in the initrd
     # This will hopefully get changed, see: https://github.com/NixOS/nixpkgs/pull/183314
