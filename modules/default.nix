@@ -83,6 +83,8 @@ in
         type = types.enum [
           "generic"
           "devkit"
+          # Select if running Orin NX som with xavier NX carrier board
+          "xavierNXdevkit"
         ];
         default = "generic";
         description = ''
