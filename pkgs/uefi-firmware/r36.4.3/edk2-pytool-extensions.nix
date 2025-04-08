@@ -3,7 +3,7 @@
   fetchFromGitHub,
   setuptools,
   setuptools-scm,
-  python3Packages,
+  semantic-version,
   pyyaml,
   edk2-pytool-library,
   pefile,
@@ -47,6 +47,6 @@ buildPythonPackage rec {
   propagatedBuildInputs = [
     pyyaml
     setuptools
-    python3Packages.semantic-version
+    semantic-version
   ];
 }
