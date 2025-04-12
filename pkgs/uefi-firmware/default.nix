@@ -1,3 +1,4 @@
+
 { l4tVersion, config, lib, pkgs, ... }:
 let
   uefi-firmware-file = if l4tVersion == "36.4.3" then
