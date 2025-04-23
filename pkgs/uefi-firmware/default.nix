@@ -8,5 +8,4 @@ let
   else
       throw "Not supported l4tVersion version";
 in
-
   pkgs.callPackages "${uefi-firmware-file}" { inherit l4tVersion; }
