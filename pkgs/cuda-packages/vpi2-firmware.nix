@@ -4,7 +4,7 @@
 , runCommand
 ,
 }:
-runCommand "vpi2-firmware" { nativeBuildInputs = [ dpkg ]; } ''
-  dpkg-deb -x ${debs.common.libnvvpi2.src} source
-  install -D source/opt/nvidia/vpi2/lib64/priv/vpi2_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
+runCommand "vpi3-firmware" { nativeBuildInputs = [ dpkg ]; } ''
+  dpkg-deb -x ${debs.common.libnvvpi3.src} source
+  install -D source/opt/nvidia/vpi3/lib64/priv/vpi3_pva_auth_allowlist $out/lib/firmware/pva_auth_allowlist
 ''
