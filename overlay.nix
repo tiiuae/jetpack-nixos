@@ -27,6 +27,8 @@ in
 
     inherit (sourceInfo) debs gitRepos;
 
+    kernelVersion = final.kernelVersion;
+
     bspSrc = prev.runCommand "l4t-unpacked"
       {
         # https://developer.nvidia.com/embedded/jetson-linux-archive
@@ -110,10 +112,10 @@ in
       nvidia-display-driver = self.callPackage ./kernel/display-driver.nix { };
     };
 
-    kernel = self.callPackage ./kernel { kernelPatches = [ ]; };
+    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = [ ]; };
     kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
-    rtkernel = self.callPackage ./kernel { kernelPatches = [ ]; realtime = true; };
+    rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = [ ]; realtime = true; };
     rtkernelPackages = (prev.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 
     nxJetsonBenchmarks = self.callPackage ./pkgs/jetson-benchmarks {
