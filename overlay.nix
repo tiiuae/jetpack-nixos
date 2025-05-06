@@ -34,6 +34,8 @@ in
     inherit (sourceInfo) debs gitRepos;
     inherit jetpackVersion l4tVersion cudaVersion;
 
+    kernelVersion = final.kernelVersion;
+
     callPackages = callPackagesWith (final // self);
 
     bspSrc = final.runCommand "l4t-unpacked"
@@ -142,7 +144,7 @@ in
         throw "Not supported l4tVersion version";
     };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; kernelPatches = []; };
+    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = []; };
     kernelPackages = (final.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
     rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware; realtime = true; };
