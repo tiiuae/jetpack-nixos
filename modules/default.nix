@@ -116,6 +116,7 @@ in
         type = types.enum [
           "bsp-default"
           "upstream-6-6"
+          "upstream-6-12"
         ];
         default = "bsp-default";
         description = "Kernel version";

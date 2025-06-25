@@ -1,0 +1,65 @@
+From c50715407b83537245f7a9e2ef0f08c76bd4e86d Mon Sep 17 00:00:00 2001
+From: Tanel Dettenborn <tanel@ssrc.tii.ae>
+Date: Thu, 19 Jun 2025 17:27:41 +0300
+Subject: [PATCH] Revert "pwm: Don't export pwm_capture()"
+
+This reverts commit f9ecc2febf6fd6ad53208a1c0e1b5066ee65dd8b.
+---
+ drivers/pwm/core.c  |  5 +++--
+ include/linux/pwm.h | 10 ++++++++++
+ 2 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index 174939359ae3..8b9b8aa07764 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -329,8 +329,8 @@ EXPORT_SYMBOL_GPL(pwm_adjust_config);
+  *
+  * Returns: 0 on success or a negative error code on failure.
+  */
+-static int pwm_capture(struct pwm_device *pwm, struct pwm_capture *result,
+-		       unsigned long timeout)
++int pwm_capture(struct pwm_device *pwm, struct pwm_capture *result,
++		unsigned long timeout)
+ {
+ 	struct pwm_chip *chip = pwm->chip;
+ 	const struct pwm_ops *ops = chip->ops;
+@@ -342,6 +342,7 @@ static int pwm_capture(struct pwm_device *pwm, struct pwm_capture *result,
+ 
+ 	return ops->capture(chip, pwm, result, timeout);
+ }
++EXPORT_SYMBOL_GPL(pwm_capture);
+ 
+ static struct pwm_chip *pwmchip_find_by_name(const char *name)
+ {
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index 8acd60b53f58..f8c2dc12dbd3 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -394,6 +394,9 @@ static inline bool pwm_might_sleep(struct pwm_device *pwm)
+ }
+ 
+ /* PWM provider APIs */
++int pwm_capture(struct pwm_device *pwm, struct pwm_capture *result,
++		unsigned long timeout);
++
+ void pwmchip_put(struct pwm_chip *chip);
+ struct pwm_chip *pwmchip_alloc(struct device *parent, unsigned int npwm, size_t sizeof_priv);
+ struct pwm_chip *devm_pwmchip_alloc(struct device *parent, unsigned int npwm, size_t sizeof_priv);
+@@ -459,6 +462,13 @@ static inline void pwm_disable(struct pwm_device *pwm)
+ 	might_sleep();
+ }
+ 
++static inline int pwm_capture(struct pwm_device *pwm,
++			      struct pwm_capture *result,
++			      unsigned long timeout)
++{
++	return -EINVAL;
++}
++
+ static inline void pwmchip_put(struct pwm_chip *chip)
+ {
+ }
+-- 
+2.47.2
+

@@ -54,7 +54,8 @@ stdenv.mkDerivation {
   patches = [
     ./0001-nix-build-fixes.patch
     ./0002-downgrade-gcc-14-err-to-warn.patch
-  ] ++ (lib.optional (kernel.modDirVersion == "6.6.75") [ ./0003-linux-6-6-build-fixes.patch ]);
+  ] ++ (lib.optional (lib.strings.versionAtLeast kernel.modDirVersion "6.6") [ ./0003-linux-6-6-build-fixes.patch ])
+    ++ (lib.optional (lib.strings.versionAtLeast kernel.modDirVersion "6.12") [ ./0001-Kernel-6.12-port.patch ]);
 
   postUnpack = ''
     # make kernel headers readable for the nvidia build system.

@@ -5,6 +5,8 @@ let
       ./5.15-r36-4-3
     else if kernelVersion == "upstream-6-6" then
       ./6.6-upstream
+    else if kernelVersion == "upstream-6-12" then
+      ./6.12-upstream
     else
       throw "Not supported kernel verion for 36.4.3 l4tVersion"
   else if l4tVersion == "35.6.1" then
