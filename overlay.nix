@@ -9,14 +9,14 @@ let
   cudaVersion = "12.6";
 
   sourceInfo = import ./sourceinfo {
-    inherit l4tVersion;
+    l4tMajorMinorPatchVersion = l4tVersion;
     inherit (prev) lib fetchurl fetchgit;
   };
 
   uefi-firmware-file = if l4tVersion == "36.4.3" then
-      ./pkgs/uefi-firmware/uefi-firmware-36.4
+      ./pkgs/uefi-firmware/r36
   else if l4tVersion == "35.6.0" then
-      ./pkgs/uefi-firmware-35.6/uefi-firmware
+      ./pkgs/uefi-firmware/r35
   else
       throw "Not supported l4tVersion version";
 
@@ -24,10 +24,11 @@ in
 {
   nvidia-jetpack = prev.lib.makeScope prev.newScope (self: ({
     inherit jetpackVersion l4tVersion cudaVersion;
+    l4tMajorMinorPatchVersion = l4tVersion;
 
     inherit (sourceInfo) debs gitRepos;
 
-    kernelVersion = final.kernelVersion;
+    kernelVersion = final.kernelVersion or "bsp-default";
 
     bspSrc = prev.runCommand "l4t-unpacked"
       {
@@ -69,7 +70,7 @@ in
         self.gitRepos
     );
 
-    inherit (prev.callPackages "${uefi-firmware-file}" { inherit (self) l4tVersion; })
+    inherit (prev.callPackages "${uefi-firmware-file}" { inherit (self) l4tMajorMinorPatchVersion; })
          edk2-jetson uefi-firmware;
 
     inherit (prev.callPackages ./pkgs/optee {
@@ -112,10 +113,10 @@ in
       nvidia-display-driver = self.callPackage ./kernel/display-driver.nix { };
     };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = [ ]; };
+    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos; kernelPatches = [ ]; };
     kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
-    rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion; kernelPatches = [ ]; realtime = true; };
+    rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos; kernelPatches = [ ]; realtime = true; };
     rtkernelPackages = (prev.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 
     nxJetsonBenchmarks = self.callPackage ./pkgs/jetson-benchmarks {
@@ -142,7 +143,11 @@ in
     # TODO(jared): deprecate this
     devicePkgsFromNixosConfig = config: config.system.build.jetsonDevicePkgs;
   } // (prev.callPackages ./pkgs/l4t {
-    inherit l4tVersion;
+    l4tMajorMinorPatchVersion = l4tVersion;
+    l4tAtLeast = prev.lib.versionAtLeast l4tVersion;
+    l4tOlder = prev.lib.versionOlder l4tVersion;
+    inherit (self) cudaPackages;
+    cudaDriverMajorMinorVersion = with prev.lib.versions; "${major cudaVersion}.${minor cudaVersion}";
     inherit (sourceInfo) debs;
   })));
 }

@@ -100,6 +100,14 @@ in
         '';
       };
 
+      majorVersion = mkOption {
+        type = types.enum [ "5" "6" ];
+        default = "6";
+        description = ''
+          JetPack major version to use. Version 5 is for L4T 35.x, Version 6 is for L4T 36.x
+        '';
+      };
+
       kernel.version = mkOption {
         type = types.enum [
           "bsp-default"

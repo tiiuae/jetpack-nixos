@@ -64,10 +64,11 @@
           let
             supportedConfigurations = lib.listToAttrs (map
               (c: {
-                name = c.som + lib.optionalString (c.super or false) "-super" + "-${c.carrierBoard}" + lib.optionalString (c ? majorVersion) "-jp${c.majorVersion}";
+                name = c.som + lib.optionalString (c.super or false) "-super" + "-${c.carrierBoard}" + lib.optionalString (c ? majorVersion) "-jp${c.majorVersion}" + lib.optionalString (c ? kernel && c.kernel ? version) "-${c.kernel.version}";
                 value = c;
               }) [
               { som = "orin-agx"; carrierBoard = "devkit"; }
+              { som = "orin-agx"; carrierBoard = "devkit"; kernel.version = "upstream-6-6"; }
               { som = "orin-agx-industrial"; carrierBoard = "devkit"; }
               { som = "orin-nx"; carrierBoard = "devkit"; }
               { som = "orin-nx"; carrierBoard = "xavierNXdevkit"; }

@@ -1,4 +1,4 @@
-{ l4tVersion, l4t-xusb-firmware, kernelVersion, realtime ? false, config, lib, pkgs, kernelPatches ? [], ... }:
+{ l4tVersion, l4t-xusb-firmware, kernelVersion, gitRepos, realtime ? false, config, lib, pkgs, kernelPatches ? [], ... }:
 let
   kernel-file = if l4tVersion == "36.4.3" then
     if kernelVersion == "bsp-default" then
@@ -15,4 +15,4 @@ let
   else
     throw "Not supported l4tVersion version";
 in
-pkgs.callPackage "${kernel-file}" { inherit l4t-xusb-firmware realtime kernelPatches; }
+pkgs.callPackage "${kernel-file}" { inherit l4t-xusb-firmware gitRepos realtime kernelPatches; }

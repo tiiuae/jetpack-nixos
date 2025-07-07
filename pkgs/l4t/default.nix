@@ -186,12 +186,12 @@ let
         patchelf --add-rpath ${lib.makeLibraryPath [ libglvnd ]} \
           $out/lib/libEGL_nvidia.so.0 \
           $out/lib/libGLX_nvidia.so.0 ${
-            if l4tVersion == "36.4.3" then
+            if l4tMajorMinorPatchVersion == "36.4.3" then
               ""
-            else if l4tVersion == "35.6.0" then
+            else if l4tMajorMinorPatchVersion == "35.6.0" then
               "$out/lib/libnvidia-vulkan-producer.so"
             else
-              throw "Unsupported l4tVersion l4t-3d-core"
+              throw "Unsupported l4tMajorMinorPatchVersion l4t-3d-core"
           }
 
         patchelf --add-rpath ${lib.makeLibraryPath (with xorg; [ libX11 libXext libxcb ])} \
@@ -212,12 +212,12 @@ let
 
     postPatch =
       let
-        ptxjitcomp = if l4tVersion == "36.4.3" then
+        ptxjitcomp = if l4tMajorMinorPatchVersion == "36.4.3" then
             {
               version = "540.4.0";
               path = "/usr/lib/aarch64-linux-gnu/nvidia";
             }
-          else if l4tVersion == "35.6.0" then
+          else if l4tMajorMinorPatchVersion == "35.6.0" then
             {
               # XXX: Temporary override here since NVIDIA didn't update this for 35.6.0
               version = "35.5.0";
@@ -431,12 +431,12 @@ let
     buildInputs = [ stdenv.cc.cc.lib l4t-core ];
     postPatch = ''
       # Remove a utility that bring in too many libraries
-      ${(if l4tVersion == "36.4.3" then
+      ${(if l4tMajorMinorPatchVersion == "36.4.3" then
         "rm sbin/nv_wpa_supplicant_wifi sbin/wpa_supplicant"
-      else if l4tVersion == "35.6.0" then
+      else if l4tMajorMinorPatchVersion == "35.6.0" then
         "rm bin/nv_macsec_wpa_supplicant"
       else
-        throw "Unsupported l4tVersion")}
+        throw "Unsupported l4tMajorMinorPatchVersion")}
 
       # sbin/wpa_supplicant is symlink to bin/*wpa_supplicant*
       rm  sbin/wpa_supplicant
