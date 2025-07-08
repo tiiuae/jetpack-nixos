@@ -30,18 +30,11 @@ let
       src = gitRepos.nvidia-oot;
       patches = [
         ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
-        ./0004-downgrade-gcc-14-errors.patch
       ] ++ lib.optionals (lib.versionAtLeast kernel.version "6.6") [
         ./0003-linux-6-6-build-fixes.patch
       ];
     })
-    (applyPatches {
-      name = "nvgpu";
-      src = gitRepos.nvgpu;
-      patches = [
-        ./0004-downgrade-gcc-14-errors.patch
-      ];
-    })
+    (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
     (applyPatches {
       name = "nvdisplay";
       src = gitRepos.nvdisplay;
@@ -49,7 +42,6 @@ let
         ./0001-nvidia-drm-Guard-nv_dev-in-nv_drm_suspend_resume.patch
         ./0002-ANDURIL-Add-some-missing-BASE_CFLAGS.patch
         ./0003-ANDURIL-Update-drm_gem_object_vmap_has_map_arg-test.patch
-        ./0004-downgrade-gcc-14-errors.patch
       ];
     })
     (applyPatches {
@@ -62,13 +54,7 @@ let
       '';
     })
     # Add hwpm - will be built for Module.symvers
-    (applyPatches {
-      name = "hwpm";
-      src = gitRepos.hwpm;
-      patches = [
-        ./0004-downgrade-gcc-14-errors.patch
-      ];
-    })
+    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
   ];
 
   l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
