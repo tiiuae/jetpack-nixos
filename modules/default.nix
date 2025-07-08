@@ -236,7 +236,7 @@ in
     # For Orin. Unsupported with PREEMPT_RT.
     boot.extraModulePackages = lib.optional
       (
-        !cfg.kernel.realtime
+        !cfg.kernel.realtime && config.boot.kernelPackages ? nvidia-oot
       )
       config.boot.kernelPackages.nvidia-oot;
 

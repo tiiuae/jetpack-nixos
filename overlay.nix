@@ -92,15 +92,31 @@ in
     tegra-eeprom-tool = prev.callPackage ./pkgs/tegra-eeprom-tool { };
     tegra-eeprom-tool-static = prev.pkgsStatic.callPackage ./pkgs/tegra-eeprom-tool { };
 
-    cudaPackages = prev.callPackages ./pkgs/cuda-packages {
-      inherit (self) debs cudaVersion
-        l4t-3d-core
-        l4t-core
-        l4t-cuda
-        l4t-cupva
-        l4t-multimedia;
+    cudaPackages = prev.lib.makeScope prev.newScope (finalCudaPackages: {
+      # Versions
+      inherit cudaVersion l4tVersion;
+      cudaMajorMinorPatchVersion = cudaVersion;
+      cudaMajorMinorVersion = prev.lib.versions.majorMinor cudaVersion;
+      cudaMajorVersion = prev.lib.versions.major cudaVersion;
+      cudaVersionDashes = prev.lib.replaceStrings [ "." ] [ "-" ] (prev.lib.versions.majorMinor cudaVersion);
+      
+      # Utilities
+      callPackages = prev.lib.callPackagesWith (self // finalCudaPackages);
+      cudaAtLeast = prev.lib.versionAtLeast cudaVersion;
+      cudaOlder = prev.lib.versionOlder cudaVersion;
+      inherit (self) debs;
+      debsForSourcePackage = srcPackageName: prev.lib.filter (pkg: (pkg.source or "") == srcPackageName) (prev.lib.attrValues finalCudaPackages.debs.common);
+      
+      # L4T packages needed by cuda packages
+      inherit (self) l4t-3d-core l4t-core l4t-cuda l4t-cupva l4t-multimedia;
+      l4tMajorMinorPatchVersion = l4tVersion;
       inherit (prev) autoAddDriverRunpath;
-    };
+    }
+    # Add the packages built from cuda-packages directory
+    // prev.lib.packagesFromDirectoryRecursive {
+      directory = ./pkgs/cuda-packages;
+      inherit (finalCudaPackages) callPackage;
+    });
 
     samples = prev.callPackages ./pkgs/samples {
       inherit (self) debs cudaVersion cudaPackages l4t-cuda l4t-multimedia l4t-camera;

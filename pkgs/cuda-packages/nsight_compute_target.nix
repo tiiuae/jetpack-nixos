@@ -1,10 +1,15 @@
 { buildFromDebs
 , debs
+, lib
 }:
 let
+  # Find the nsight-compute version from available debs
+  nsightComputeDebs = lib.filterAttrs (n: v: lib.hasPrefix "nsight-compute-" n && n != "nsight-compute-addon-l4t") debs.common;
+  nsightComputeVersion = lib.head (lib.mapAttrsToList (n: v: lib.removePrefix "nsight-compute-" n) nsightComputeDebs);
+  
   finalAttrs = {
     pname = "nsight-compute-target";
-    version = "2022.2.1";
+    version = nsightComputeVersion;
     srcs = debs.common."nsight-compute-${finalAttrs.version}".src;
     postPatch = ''
       # ncu relies on relative folder structure to find sections file so emulate that
