@@ -53,8 +53,8 @@ let
         chmod -R u+w osi
       '';
     })
-    # Don't add hwpm separately - it's already built as part of nvidia-oot
-    # to avoid duplicate nvhwpm.ko module collision
+    # Add hwpm - needed for conftest and Module.symvers
+    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
   ];
 
   l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
@@ -94,6 +94,29 @@ stdenv.mkDerivation (finalAttrs: {
 
   # Use default install phase
   installTargets = [ "modules_install" ];
+
+  # Remove duplicate hwpm module to prevent collision
+  # The hwpm module is built both standalone and as part of nvidia-oot
+  postInstall = ''
+    echo "=== Looking for hwpm modules to deduplicate ==="
+    find $out -name "nvhwpm.ko*" -type f | while read -r f; do
+      echo "Found hwpm module: $f"
+    done
+    
+    # The hwpm module gets built twice:
+    # 1. As part of nvidia-oot (in .../updates/nvhwpm.ko.xz)
+    # 2. As standalone hwpm (in .../updates/drivers/tegra/hwpm/nvhwpm.ko.xz)
+    # We remove the standalone one to prevent collision
+    standalone_hwpm="$out/lib/modules/${kernel.modDirVersion}/updates/drivers/tegra/hwpm/nvhwpm.ko.xz"
+    if [ -f "$standalone_hwpm" ]; then
+      echo "Removing duplicate standalone hwpm module: $standalone_hwpm"
+      rm -f "$standalone_hwpm"
+      # Clean up empty directories
+      rmdir "$out/lib/modules/${kernel.modDirVersion}/updates/drivers/tegra/hwpm" 2>/dev/null || true
+      rmdir "$out/lib/modules/${kernel.modDirVersion}/updates/drivers/tegra" 2>/dev/null || true
+      rmdir "$out/lib/modules/${kernel.modDirVersion}/updates/drivers" 2>/dev/null || true
+    fi
+  '';
 
   # # GCC 14.2 seems confused about DRM_MODESET_LOCK_ALL_BEGIN/DRM_MODESET_LOCK_ALL_END in nvdisplay/kernel-open/nvidia-drm/nvidia-drm-drv.c:1344
   # extraMakeFlags = [ "KCFLAGS=-Wno-error=unused-label" ];
