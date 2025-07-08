@@ -68,13 +68,18 @@ final: prev: (
         # uefi-firmware.  We do a fancy override scope here to make a version
         # of the bup that is otherwise identical, but does not depend on
         # uefi-firmware. The level of magic here can be frightening.
-        uniqueHash =
-          let
-            cursedBup = (finalJetpack.overrideScope (a: b: {
-              uefi-firmware = null;
-            })).bup;
-          in
-          builtins.hashString "sha256" "${cursedBup}";
+
+        # uniqueHash =
+        #   let
+        #     cursedBup = (finalJetpack.overrideScope (a: b: {
+        #       uefi-firmware = null;
+        #     })).bup;
+        #   in
+        #   builtins.hashString "sha256" "${cursedBup}";
+
+        # FIXME: Temporary workaround for infinite recursion
+        # The cursedBup override doesn't properly break the circular dependency
+        uniqueHash = "temporary-hash-${builtins.hashString "sha256" "${cfg.som}-${cfg.carrierBoard}-${cfg.flashScriptOverrides.targetBoard or "default"}"}";
       } // lib.optionalAttrs (prevJetpack.l4tAtLeast "36") {
         # r36+ only: r35's stuart argument set is closed, so it can't accept this.
         extraPackages = cfg.firmware.uefi.edk2ExtraPackages;
