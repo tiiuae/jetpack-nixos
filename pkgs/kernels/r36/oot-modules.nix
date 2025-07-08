@@ -15,6 +15,7 @@ let
     src = bspSrc;
     patches = [
       ./Makefile.diff
+      ./0001-fix-kernel-source-paths.patch
     ];
   };
 
@@ -29,11 +30,18 @@ let
       src = gitRepos.nvidia-oot;
       patches = [
         ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
+        ./0004-downgrade-gcc-14-errors.patch
       ] ++ lib.optionals (lib.versionAtLeast kernel.version "6.6") [
         ./0003-linux-6-6-build-fixes.patch
       ];
     })
-    (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
+    (applyPatches {
+      name = "nvgpu";
+      src = gitRepos.nvgpu;
+      patches = [
+        ./0004-downgrade-gcc-14-errors.patch
+      ];
+    })
     (applyPatches {
       name = "nvdisplay";
       src = gitRepos.nvdisplay;
@@ -41,6 +49,7 @@ let
         ./0001-nvidia-drm-Guard-nv_dev-in-nv_drm_suspend_resume.patch
         ./0002-ANDURIL-Add-some-missing-BASE_CFLAGS.patch
         ./0003-ANDURIL-Update-drm_gem_object_vmap_has_map_arg-test.patch
+        ./0004-downgrade-gcc-14-errors.patch
       ];
     })
     (applyPatches {
@@ -52,8 +61,14 @@ let
         chmod -R u+w osi
       '';
     })
-    # Add hwpm for headers only - we don't build it separately
-    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
+    # Add hwpm - will be built for Module.symvers
+    (applyPatches {
+      name = "hwpm";
+      src = gitRepos.hwpm;
+      patches = [
+        ./0004-downgrade-gcc-14-errors.patch
+      ];
+    })
   ];
 
   l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
@@ -88,57 +103,28 @@ stdenv.mkDerivation (finalAttrs: {
     "INSTALL_MOD_PATH=$(out)"
   ];
 
-  # Build hwpm first to generate Module.symvers, then build nvidia-oot
-  buildPhase = ''
-    runHook preBuild
-    
-    # Use the cross-compiler
-    export CC="${stdenv.cc.targetPrefix}cc"
-    export LD="${stdenv.cc.targetPrefix}ld"
-    export AR="${stdenv.cc.targetPrefix}ar"
-    export OBJCOPY="${stdenv.cc.targetPrefix}objcopy"
-    
-    # The main Makefile handles the dependency chain properly: conftest -> hwpm -> nvidia-oot
-    # Let's use it directly instead of trying to manage dependencies manually
-    echo "Building all modules using the main Makefile..."
-    make -j $NIX_BUILD_CORES modules \
-      ARCH=arm64 \
-      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
-      CC="${stdenv.cc.targetPrefix}cc" \
-      LD="${stdenv.cc.targetPrefix}ld" \
-      AR="${stdenv.cc.targetPrefix}ar" \
-      OBJCOPY="${stdenv.cc.targetPrefix}objcopy" \
-      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
-      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build
-    
-    
-    runHook postBuild
-  '';
+  # Use default buildPhase with makeFlags
+  buildFlags = [ "modules" ];
 
-  # Custom install phase to avoid installing duplicate hwpm module
-  installPhase = ''
-    runHook preInstall
+  # Use default install phase
+  installTargets = [ "modules_install" ];
+
+  # Remove duplicate hwpm module to prevent collision
+  postInstall = ''
+    # Find all nvhwpm.ko* files
+    hwpm_files=$(find $out -name "nvhwpm.ko*" -type f || true)
+    hwpm_count=$(echo "$hwpm_files" | grep -c . || echo 0)
     
-    # Install modules using make modules_install
-    make modules_install \
-      ARCH=arm64 \
-      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
-      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
-      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
-      INSTALL_MOD_PATH=$out
-    
-    # Remove duplicate hwpm module to prevent collision
-    echo "Removing duplicate hwpm module to prevent collision..."
-    find $out -name "nvhwpm.ko*" | while read hwpm_module; do
-      echo "Found hwpm module at: $hwpm_module"
-      # Keep only one copy - prefer the one in nvidia-oot
-      if [[ "$hwpm_module" =~ "hwpm/drivers/tegra/hwpm" ]]; then
-        echo "Removing standalone hwpm module: $hwpm_module"
-        rm -f "$hwpm_module"
-      fi
-    done
-    
-    runHook postInstall
+    if [ "$hwpm_count" -gt 1 ]; then
+      echo "Found $hwpm_count hwpm modules, removing duplicates..."
+      # Keep the one in nvidia-oot, remove standalone
+      echo "$hwpm_files" | while read -r hwpm_module; do
+        if [[ "$hwpm_module" =~ "/hwpm/drivers/tegra/hwpm/" ]]; then
+          echo "Removing standalone hwpm module: $hwpm_module"
+          rm -f "$hwpm_module"
+        fi
+      done
+    fi
   '';
 
   # # GCC 14.2 seems confused about DRM_MODESET_LOCK_ALL_BEGIN/DRM_MODESET_LOCK_ALL_END in nvdisplay/kernel-open/nvidia-drm/nvidia-drm-drv.c:1344
