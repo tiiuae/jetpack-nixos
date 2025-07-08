@@ -1,15 +1,11 @@
 diff --git a/source/Makefile b/source/Makefile
-index 602ddf0..4e8f3b5 100644
+index 602ddf0..ba93b58 100644
 --- a/source/Makefile
 +++ b/source/Makefile
-@@ -46,8 +46,11 @@ ifeq ($(MAKECMDGOALS), modules)
- 	$(MAKE) -j $(NPROC) ARCH=arm64 \
- 		src=$(NVIDIA_CONFTEST)/nvidia obj=$(NVIDIA_CONFTEST)/nvidia \
+@@ -48,6 +48,9 @@ ifeq ($(MAKECMDGOALS), modules)
  		CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld \
--		NV_KERNEL_SOURCES=$(KERNEL_HEADERS)/source \
--		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT)/build \
-+		NV_KERNEL_SOURCES=$(KERNEL_HEADERS) \
-+		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT) \
+ 		NV_KERNEL_SOURCES=$(KERNEL_HEADERS) \
+ 		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT) \
 +		KBUILD_EXTMOD=$(NVIDIA_CONFTEST)/nvidia \
 +		srctree.nvidia=$(MAKEFILE_DIR)/nvidia-oot \
 +		IGNORE_MISSING_MODULE_SYMVERS=1 \
