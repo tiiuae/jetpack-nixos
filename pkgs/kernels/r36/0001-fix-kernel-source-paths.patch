@@ -2,23 +2,12 @@ diff --git a/source/Makefile b/source/Makefile
 index 602ddf0..4e8f3b5 100644
 --- a/source/Makefile
 +++ b/source/Makefile
-@@ -2,8 +2,8 @@
- # SPDX-License-Identifier: BSD-3-Clause
- 
- KERNEL_HEADERS ?= /lib/modules/$(shell uname -r)/build
--KERNEL_OUTPUT ?= ${KERNEL_HEADERS}
--
-+# In NixOS, kernel source is in a 'source' subdirectory
-+KERNEL_OUTPUT ?= ${KERNEL_HEADERS}
- MAKEFILE_DIR := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))
- NVIDIA_HEADERS ?= ${MAKEFILE_DIR}/out/nvidia-linux-header
- NVIDIA_CONFTEST ?= ${MAKEFILE_DIR}/out/nvidia-conftest
-@@ -46,8 +46,10 @@ ifeq ($(MAKECMDGOALS), modules)
+@@ -46,8 +46,11 @@ ifeq ($(MAKECMDGOALS), modules)
  	$(MAKE) -j $(NPROC) ARCH=arm64 \
  		src=$(NVIDIA_CONFTEST)/nvidia obj=$(NVIDIA_CONFTEST)/nvidia \
  		CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld \
--		NV_KERNEL_SOURCES=$(KERNEL_HEADERS) \
--		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT) \
+-		NV_KERNEL_SOURCES=$(KERNEL_HEADERS)/source \
+-		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT)/build \
 +		NV_KERNEL_SOURCES=$(KERNEL_HEADERS) \
 +		NV_KERNEL_OUTPUT=$(KERNEL_OUTPUT) \
 +		KBUILD_EXTMOD=$(NVIDIA_CONFTEST)/nvidia \
@@ -27,14 +16,7 @@ index 602ddf0..4e8f3b5 100644
  		-f $(NVIDIA_CONFTEST)/nvidia/Makefile
  endif
  
-@@ -60,11 +62,13 @@ hwpm: conftest
- 	@echo   "================================================================================"
- 	@echo   "make $(MAKECMDGOALS) - hwpm ..."
- 	@echo   "================================================================================"
-+	# Ensure conftest results are available for hwpm
- 	$(MAKE) -j $(NPROC) ARCH=arm64 \
- 		-C $(KERNEL_OUTPUT) \
- 		M=$(MAKEFILE_DIR)/hwpm/drivers/tegra/hwpm \
+@@ -67,6 +70,7 @@ hwpm: conftest
  		CONFIG_TEGRA_OOT_MODULE=m \
  		srctree.hwpm=$(MAKEFILE_DIR)/hwpm \
  		srctree.nvconftest=$(NVIDIA_CONFTEST) \
