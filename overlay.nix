@@ -4,13 +4,15 @@
 
 final: prev:
 let
+  inherit (prev) lib;
   jetpackVersion = "6.2";
   l4tVersion = "36.4.3";
   cudaVersion = "12.6";
 
   sourceInfo = import ./sourceinfo {
     l4tMajorMinorPatchVersion = l4tVersion;
-    inherit (prev) lib fetchurl fetchgit;
+    inherit lib;
+    inherit (prev) fetchurl fetchgit;
   };
 
   uefi-firmware-file =
@@ -126,14 +128,34 @@ in
 
     tests = prev.callPackages ./pkgs/tests { inherit l4tVersion; };
 
-    kernelPackagesOverlay = final: prev: {
-      nvidia-display-driver = self.callPackage ./kernel/display-driver.nix { };
-    };
+    kernelPackagesOverlay = final: _:
+      if lib.versionAtLeast l4tVersion "36" then {
+        nvidia-oot = final.callPackage ./pkgs/kernels/r36/oot-modules.nix {
+          inherit (self) bspSrc gitRepos;
+          inherit (final) kernel;
+          l4tMajorMinorPatchVersion = l4tVersion;
+        };
+      } else {
+        nvidia-display-driver = self.callPackage ./kernel/display-driver.nix {
+          inherit (self) gitRepos;
+          inherit (final) kernel;
+          l4tMajorMinorPatchVersion = l4tVersion;
+        };
+      };
 
-    kernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos; kernelPatches = [ ]; };
+    kernel = self.callPackage (if lib.versionAtLeast l4tVersion "36" then ./pkgs/kernels/r36 else ./kernel) {
+      inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos;
+      l4tMajorMinorPatchVersion = l4tVersion;
+      kernelPatches = [ ];
+    };
     kernelPackages = (prev.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
-    rtkernel = self.callPackage ./kernel { inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos; kernelPatches = [ ]; realtime = true; };
+    rtkernel = self.callPackage (if lib.versionAtLeast l4tVersion "36" then ./pkgs/kernels/r36 else ./kernel) {
+      inherit (self) l4tVersion l4t-xusb-firmware kernelVersion gitRepos;
+      l4tMajorMinorPatchVersion = l4tVersion;
+      kernelPatches = [ ];
+      realtime = true;
+    };
     rtkernelPackages = (prev.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 
     nxJetsonBenchmarks = self.callPackage ./pkgs/jetson-benchmarks {
