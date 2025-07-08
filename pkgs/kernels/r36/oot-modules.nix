@@ -53,8 +53,8 @@ let
         chmod -R u+w osi
       '';
     })
-    # Add hwpm - will be built for Module.symvers
-    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
+    # Don't add hwpm separately - it's already built as part of nvidia-oot
+    # to avoid duplicate nvhwpm.ko module collision
   ];
 
   l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
@@ -94,31 +94,6 @@ stdenv.mkDerivation (finalAttrs: {
 
   # Use default install phase
   installTargets = [ "modules_install" ];
-
-  # Remove duplicate hwpm module to prevent collision
-  postInstall = ''
-    echo "=== Searching for hwpm modules ==="
-    find $out -name "*hwpm*" -type f | while read -r f; do
-      echo "Found: $f"
-    done
-    
-    # Find all nvhwpm.ko* files (including compressed)
-    hwpm_files=$(find $out -name "nvhwpm.ko*" -type f || true)
-    hwpm_count=$(echo "$hwpm_files" | grep -c . || echo 0)
-    
-    echo "Found $hwpm_count hwpm module files:"
-    echo "$hwpm_files"
-    
-    if [ "$hwpm_count" -gt 1 ]; then
-      echo "Removing duplicate hwpm modules..."
-      # Remove the standalone hwpm module, keep the one in nvidia-oot
-      find $out -path "*/hwpm/drivers/tegra/hwpm/nvhwpm.ko*" -type f -exec rm -v {} \;
-    elif [ "$hwpm_count" -eq 0 ]; then
-      echo "WARNING: No hwpm modules found!"
-    else
-      echo "Only one hwpm module found, no duplicates to remove"
-    fi
-  '';
 
   # # GCC 14.2 seems confused about DRM_MODESET_LOCK_ALL_BEGIN/DRM_MODESET_LOCK_ALL_END in nvdisplay/kernel-open/nvidia-drm/nvidia-drm-drv.c:1344
   # extraMakeFlags = [ "KCFLAGS=-Wno-error=unused-label" ];
