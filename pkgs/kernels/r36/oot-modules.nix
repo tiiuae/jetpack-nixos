@@ -53,6 +53,8 @@ let
         chmod -R u+w osi
       '';
     })
+    # Add hwpm for headers only - we don't build it separately
+    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
   ];
 
   l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
@@ -86,6 +88,16 @@ stdenv.mkDerivation (finalAttrs: {
     "KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build"
     "INSTALL_MOD_PATH=$(out)"
   ];
+
+  # Ensure hwpm headers are available for nvidia-oot build
+  preBuild = ''
+    # Copy hwpm headers to nvidia-oot include path
+    if [ -d hwpm/include ]; then
+      echo "Copying hwpm headers to nvidia-oot"
+      mkdir -p nvidia-oot/include
+      cp -r hwpm/include/* nvidia-oot/include/
+    fi
+  '';
 
   # # GCC 14.2 seems confused about DRM_MODESET_LOCK_ALL_BEGIN/DRM_MODESET_LOCK_ALL_END in nvdisplay/kernel-open/nvidia-drm/nvidia-drm-drv.c:1344
   # extraMakeFlags = [ "KCFLAGS=-Wno-error=unused-label" ];
