@@ -433,14 +433,15 @@ let
     postPatch = ''
       # Remove a utility that bring in too many libraries
       ${(if l4tMajorMinorPatchVersion == "36.4.3" then
-        "rm sbin/nv_wpa_supplicant_wifi sbin/wpa_supplicant"
+        "rm -f sbin/nv_wpa_supplicant_wifi sbin/wpa_supplicant"
       else if l4tMajorMinorPatchVersion == "35.6.0" then
-        "rm bin/nv_macsec_wpa_supplicant"
+        ''
+          rm -f bin/nv_macsec_wpa_supplicant
+          # sbin/wpa_supplicant is symlink to bin/*wpa_supplicant*
+          rm -f sbin/wpa_supplicant
+        ''
       else
         throw "Unsupported l4tMajorMinorPatchVersion")}
-
-      # sbin/wpa_supplicant is symlink to bin/*wpa_supplicant*
-      rm  sbin/wpa_supplicant
 
       # This just contains a symlink to a binary already in /bin (nvcapture-status-decoder)
       rm -rf opt
