@@ -15,7 +15,7 @@ let
     src = bspSrc;
     patches = [
       ./Makefile.diff
-      ./0005-remove-hwpm-dependency-from-nvidia-oot.patch
+      ./0005-integrate-hwpm-into-nvidia-oot.patch
     ];
   };
 
@@ -89,8 +89,21 @@ stdenv.mkDerivation (finalAttrs: {
     "INSTALL_MOD_PATH=$(out)"
   ];
 
-  # Ensure hwpm headers are available for nvidia-oot build
+  # Ensure hwpm is properly integrated into nvidia-oot build
   preBuild = ''
+    # Create symlink for hwpm in nvidia-oot if it doesn't exist
+    if [ -d hwpm ] && [ ! -e nvidia-oot/drivers/platform/tegra/hwpm ]; then
+      echo "Creating symlink for hwpm in nvidia-oot"
+      mkdir -p nvidia-oot/drivers/platform/tegra/
+      ln -s $PWD/hwpm/drivers/tegra/hwpm nvidia-oot/drivers/platform/tegra/hwpm
+    fi
+    
+    # Ensure hwpm is included in the build
+    if [ -f nvidia-oot/drivers/platform/tegra/Makefile ] && ! grep -q "hwpm" nvidia-oot/drivers/platform/tegra/Makefile; then
+      echo "Adding hwpm to nvidia-oot platform/tegra Makefile"
+      echo "obj-m += hwpm/" >> nvidia-oot/drivers/platform/tegra/Makefile
+    fi
+    
     # Copy hwpm headers to nvidia-oot include path
     if [ -d hwpm/include ]; then
       echo "Copying hwpm headers to nvidia-oot"
