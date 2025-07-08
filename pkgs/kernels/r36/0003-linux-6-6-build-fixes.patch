@@ -1,7 +1,7 @@
-diff --git a/nvidia-oot/scripts/conftest/conftest.sh b/nvidia-oot/scripts/conftest/conftest.sh
+diff --git a/scripts/conftest/conftest.sh b/scripts/conftest/conftest.sh
 index a7fb019..9453c68 100755
---- a/nvidia-oot/scripts/conftest/conftest.sh
-+++ b/nvidia-oot/scripts/conftest/conftest.sh
+--- a/scripts/conftest/conftest.sh
++++ b/scripts/conftest/conftest.sh
 @@ -7250,7 +7250,7 @@ compile_test() {
              #include <linux/compiler_attributes.h>
              #include <linux/shrinker.h>
