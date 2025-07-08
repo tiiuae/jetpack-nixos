@@ -92,10 +92,25 @@ stdenv.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
     
+    # Use the cross-compiler
+    export CC="${stdenv.cc.targetPrefix}cc"
+    export LD="${stdenv.cc.targetPrefix}ld"
+    export AR="${stdenv.cc.targetPrefix}ar"
+    export OBJCOPY="${stdenv.cc.targetPrefix}objcopy"
+    
+    # First, run conftest to prepare the build environment
+    echo "Running conftest..."
+    make -f Makefile conftest \
+      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
+      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
+      CROSS_COMPILE=${stdenv.cc.targetPrefix}
+    
     # First build hwpm to generate Module.symvers
     echo "Building hwpm to generate Module.symvers..."
     make -j $NIX_BUILD_CORES \
       ARCH=arm64 \
+      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
+      CC="${stdenv.cc.targetPrefix}cc" \
       -C ${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
       M=$PWD/hwpm/drivers/tegra/hwpm \
       CONFIG_TEGRA_OOT_MODULE=m \
@@ -114,6 +129,12 @@ stdenv.mkDerivation (finalAttrs: {
     # Now build the rest using the Makefile
     echo "Building nvidia-oot and other modules..."
     make -j $NIX_BUILD_CORES modules \
+      ARCH=arm64 \
+      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
+      CC="${stdenv.cc.targetPrefix}cc" \
+      LD="${stdenv.cc.targetPrefix}ld" \
+      AR="${stdenv.cc.targetPrefix}ar" \
+      OBJCOPY="${stdenv.cc.targetPrefix}objcopy" \
       KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
       KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build
     
@@ -126,6 +147,8 @@ stdenv.mkDerivation (finalAttrs: {
     
     # Install modules using make modules_install
     make modules_install \
+      ARCH=arm64 \
+      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
       KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
       KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
       INSTALL_MOD_PATH=$out
