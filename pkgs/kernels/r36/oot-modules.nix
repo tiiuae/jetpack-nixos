@@ -28,7 +28,9 @@ let
     (applyPatches {
       name = "nvidia-oot";
       src = gitRepos.nvidia-oot;
-      patches = lib.optionals (lib.versionAtLeast kernel.version "6.6") [
+      patches = [
+        ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
+      ] ++ lib.optionals (lib.versionAtLeast kernel.version "6.6") [
         ./0003-linux-6-6-build-fixes.patch
       ];
     })
