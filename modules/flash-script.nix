@@ -442,9 +442,19 @@ in
     system.build = {
       jetsonDevicePkgs = (lib.mapAttrs (_: lib.warn "system.build.jetsonDevicePkgs is deprecated, use pkgs.nvidia-jetpack") pkgs.nvidia-jetpack);
 
-      # Left here for compatibility
-      inherit (pkgs.nvidia-jetpack) uefiCapsuleUpdate flashScript initrdFlashScript fuseScript signedFirmware;
-    };
+      # These are created by overlay-with-config.nix, but we need to handle the case where they might not exist
+      # to avoid circular dependencies
+    } // (lib.optionalAttrs (pkgs.nvidia-jetpack ? uefiCapsuleUpdate) {
+      inherit (pkgs.nvidia-jetpack) uefiCapsuleUpdate;
+    }) // (lib.optionalAttrs (pkgs.nvidia-jetpack ? flashScript) {
+      inherit (pkgs.nvidia-jetpack) flashScript;
+    }) // (lib.optionalAttrs (pkgs.nvidia-jetpack ? initrdFlashScript) {
+      inherit (pkgs.nvidia-jetpack) initrdFlashScript;
+    }) // (lib.optionalAttrs (pkgs.nvidia-jetpack ? fuseScript) {
+      inherit (pkgs.nvidia-jetpack) fuseScript;
+    }) // (lib.optionalAttrs (pkgs.nvidia-jetpack ? signedFirmware) {
+      inherit (pkgs.nvidia-jetpack) signedFirmware;
+    });
 
     hardware.nvidia-jetpack.flashScriptOverrides.flashArgs = lib.mkAfter (
       lib.optional (cfg.firmware.secureBoot.pkcFile != null) "-u ${cfg.firmware.secureBoot.pkcFile}" ++

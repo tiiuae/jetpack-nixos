@@ -3,9 +3,9 @@
 let
   # Remove kernelVersion from args to avoid passing it to the actual kernel package
   kernelArgs = builtins.removeAttrs args [ "kernelVersion" ];
-  
+
   # Select the appropriate kernel package based on kernelVersion
-  kernelPackage = 
+  kernelPackage =
     if kernelVersion == "bsp-default" then
       ./5.15-bsp.nix
     else if kernelVersion == "upstream-6-6" then

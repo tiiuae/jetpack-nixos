@@ -13,11 +13,12 @@ let
     inherit (prev) lib fetchurl fetchgit;
   };
 
-  uefi-firmware-file = if l4tVersion == "36.4.3" then
+  uefi-firmware-file =
+    if l4tVersion == "36.4.3" then
       ./pkgs/uefi-firmware/r36
-  else if l4tVersion == "35.6.0" then
+    else if l4tVersion == "35.6.0" then
       ./pkgs/uefi-firmware/r35
-  else
+    else
       throw "Not supported l4tVersion version";
 
 in
@@ -71,7 +72,7 @@ in
     );
 
     inherit (prev.callPackages "${uefi-firmware-file}" { inherit (self) l4tMajorMinorPatchVersion; })
-         edk2-jetson uefi-firmware;
+      edk2-jetson uefi-firmware;
 
     inherit (prev.callPackages ./pkgs/optee {
       # Nvidia's recommended toolchain is gcc9:
@@ -99,14 +100,14 @@ in
       cudaMajorMinorVersion = prev.lib.versions.majorMinor cudaVersion;
       cudaMajorVersion = prev.lib.versions.major cudaVersion;
       cudaVersionDashes = prev.lib.replaceStrings [ "." ] [ "-" ] (prev.lib.versions.majorMinor cudaVersion);
-      
+
       # Utilities
       callPackages = prev.lib.callPackagesWith (self // finalCudaPackages);
       cudaAtLeast = prev.lib.versionAtLeast cudaVersion;
       cudaOlder = prev.lib.versionOlder cudaVersion;
       inherit (self) debs;
       debsForSourcePackage = srcPackageName: prev.lib.filter (pkg: (pkg.source or "") == srcPackageName) (prev.lib.attrValues finalCudaPackages.debs.common);
-      
+
       # L4T packages needed by cuda packages
       inherit (self) l4t-3d-core l4t-core l4t-cuda l4t-cupva l4t-multimedia;
       l4tMajorMinorPatchVersion = l4tVersion;

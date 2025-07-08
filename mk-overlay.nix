@@ -145,16 +145,16 @@ makeScope final.newScope (self: {
       nvidia-display-driver = final.callPackage ./pkgs/kernels/r${l4tMajorVersion}/display-driver.nix { inherit (self) gitRepos l4tMajorMinorPatchVersion; };
     };
 
-  kernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { 
-    kernelPatches = [ ]; 
+  kernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} {
+    kernelPatches = [ ];
     kernelVersion = final.kernelVersion or "bsp-default";
   };
   kernelPackages = (final.linuxPackagesFor self.kernel).extend self.kernelPackagesOverlay;
 
-  rtkernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { 
-    kernelPatches = [ ]; 
+  rtkernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} {
+    kernelPatches = [ ];
     kernelVersion = final.kernelVersion or "bsp-default";
-    realtime = true; 
+    realtime = true;
   };
   rtkernelPackages = (final.linuxPackagesFor self.rtkernel).extend self.kernelPackagesOverlay;
 

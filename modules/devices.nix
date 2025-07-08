@@ -116,12 +116,13 @@ in
         })
 
         (mkIf (cfg.som == "orin-nx" || cfg.som == "orin-nano") {
-          targetBoard = if cfg.carrierBoard == "devkit" then
-             mkDefault "jetson-orin-nano-devkit${lib.optionalString cfg.super "-super"}"
-           else if cfg.carrierBoard == "xavierNXdevkit" then
-             # Use this instead if you want to use the original Xavier NX Devkit module (p3509-a02)
-             mkDefault "p3509-a02-p3767-0000"
-           else throw "Not supported carrierBoard for orin-nx or orin-agx";
+          targetBoard =
+            if cfg.carrierBoard == "devkit" then
+              mkDefault "jetson-orin-nano-devkit${lib.optionalString cfg.super "-super"}"
+            else if cfg.carrierBoard == "xavierNXdevkit" then
+            # Use this instead if you want to use the original Xavier NX Devkit module (p3509-a02)
+              mkDefault "p3509-a02-p3767-0000"
+            else throw "Not supported carrierBoard for orin-nx or orin-agx";
 
           partitionTemplate = mkDefault "${pkgs.nvidia-jetpack.bspSrc}/bootloader/${partitionTemplateDirectory}/cfg/flash_t234_qspi.xml";
         })

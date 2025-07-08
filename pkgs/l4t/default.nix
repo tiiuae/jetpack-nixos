@@ -212,7 +212,8 @@ let
 
     postPatch =
       let
-        ptxjitcomp = if l4tMajorMinorPatchVersion == "36.4.3" then
+        ptxjitcomp =
+          if l4tMajorMinorPatchVersion == "36.4.3" then
             {
               version = "540.4.0";
               path = "/usr/lib/aarch64-linux-gnu/nvidia";
@@ -224,7 +225,7 @@ let
               path = "/usr/lib/aarch64-linux-gnu/tegra";
             }
           else
-             throw "Unsuported l4t-cuda BSP version";
+            throw "Unsuported l4t-cuda BSP version";
       in
       ''
         # Additional libcuda symlinks

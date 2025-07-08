@@ -94,9 +94,9 @@ pkgsAarch64.buildLinux (args // {
         USB_XHCI_TEGRA y
         EXTRA_FIRMWARE_DIR ${l4t-xusb-firmware}/lib/firmware
         EXTRA_FIRMWARE nvidia/tegra194/xusb.bin
-  '';
+      '';
     }
-] ++ kernelPatches;
+  ] ++ kernelPatches;
 
   structuredExtraConfig = with lib.kernel; {
 

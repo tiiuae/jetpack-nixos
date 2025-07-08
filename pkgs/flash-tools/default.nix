@@ -46,7 +46,8 @@ let
       perl
     ];
 
-    patches = if l4tMajorMinorPatchVersion == "36.4.3" then
+    patches =
+      if l4tMajorMinorPatchVersion == "36.4.3" then
         [ ./flash-tools-r36-4-3.patch ]
       else if l4tMajorMinorPatchVersion == "35.6.0" then
         [ ./flash-tools-r35-6-0.patch ]

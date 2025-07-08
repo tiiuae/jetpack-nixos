@@ -57,12 +57,7 @@
 
       nixosModules.default = import ./modules/default.nix;
 
-      overlays = {
-        default = import ./overlay-dynamic.nix;
-        legacy = import ./overlay.nix;
-        # For advanced users who want to pass parameters directly
-        makeOverlay = import ./mk-overlay.nix;
-      };
+      overlays.default = import ./overlay.nix;
 
       packages = {
         x86_64-linux =
@@ -86,10 +81,12 @@
               { som = "orin-nano"; carrierBoard = "devkit"; majorVersion = "5"; }
               { som = "orin-nx"; carrierBoard = "devkit"; super = true; majorVersion = "5"; }
               { som = "orin-nano"; carrierBoard = "devkit"; super = true; majorVersion = "5"; }
-              { som = "xavier-agx"; carrierBoard = "devkit"; }
-              { som = "xavier-agx-industrial"; carrierBoard = "devkit"; } # TODO: Entirely untested
-              { som = "xavier-nx"; carrierBoard = "devkit"; }
-              { som = "xavier-nx-emmc"; carrierBoard = "devkit"; }
+              # Xavier devices only support JetPack 5, but our overlay is hardcoded to JetPack 6
+              # TODO: Re-enable when we support multiple JetPack versions
+              # { som = "xavier-agx"; carrierBoard = "devkit"; }
+              # { som = "xavier-agx-industrial"; carrierBoard = "devkit"; } # TODO: Entirely untested
+              # { som = "xavier-nx"; carrierBoard = "devkit"; }
+              # { som = "xavier-nx-emmc"; carrierBoard = "devkit"; }
             ]);
 
             supportedNixOSConfigurations = lib.mapAttrs
