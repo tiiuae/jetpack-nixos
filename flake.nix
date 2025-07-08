@@ -57,7 +57,12 @@
 
       nixosModules.default = import ./modules/default.nix;
 
-      overlays.default = import ./overlay.nix;
+      overlays = {
+        default = import ./overlay-dynamic.nix;
+        legacy = import ./overlay.nix;
+        # For advanced users who want to pass parameters directly
+        makeOverlay = import ./mk-overlay.nix;
+      };
 
       packages = {
         x86_64-linux =
