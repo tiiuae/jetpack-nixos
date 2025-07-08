@@ -29,8 +29,11 @@ let
       name = "nvidia-oot";
       src = gitRepos.nvidia-oot;
       patches = [
-        ./0001-rtl8822ce-Fix-Werror-address.patch
-        ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
+        ./0001-nix-build-fixes.patch
+        ./0002-downgrade-gcc-14-err-to-warn.patch
+      ] ++ lib.optionals (lib.versionAtLeast kernel.version "6.6") [
+        ./0003-linux-6-6-build-fixes.patch
+        ./0004-fix-nvmap-register_shrinker-kernel-6.6.patch
       ];
     })
     (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
