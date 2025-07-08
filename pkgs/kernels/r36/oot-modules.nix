@@ -24,7 +24,6 @@ let
   '';
 
   l4t-oot-projects = [
-    (gitRepos.hwpm.overrideAttrs { name = "hwpm"; })
     (applyPatches {
       name = "nvidia-oot";
       src = gitRepos.nvidia-oot;
