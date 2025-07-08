@@ -30,7 +30,6 @@ let
       src = gitRepos.nvidia-oot;
       patches = lib.optionals (lib.versionAtLeast kernel.version "6.6") [
         ./0003-linux-6-6-build-fixes.patch
-        ./0004-fix-nvmap-register_shrinker-kernel-6.6.patch
       ];
     })
     (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })

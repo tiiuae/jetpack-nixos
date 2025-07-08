@@ -2,7 +2,7 @@ diff --git a/scripts/conftest/conftest.sh b/scripts/conftest/conftest.sh
 index a7fb019..9453c68 100755
 --- a/scripts/conftest/conftest.sh
 +++ b/scripts/conftest/conftest.sh
-@@ -7250,7 +7250,7 @@ compile_test() {
+@@ -7570,7 +7570,7 @@ compile_test() {
              #include <linux/compiler_attributes.h>
              #include <linux/shrinker.h>
              int conftest_register_shrinker_has_fmt_arg(struct shrinker *s, const char *name) {
