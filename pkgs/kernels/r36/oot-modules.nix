@@ -15,7 +15,6 @@ let
     src = bspSrc;
     patches = [
       ./Makefile.diff
-      ./0005-integrate-hwpm-into-nvidia-oot.patch
     ];
   };
 
@@ -89,32 +88,62 @@ stdenv.mkDerivation (finalAttrs: {
     "INSTALL_MOD_PATH=$(out)"
   ];
 
-  # Ensure hwpm is properly integrated into nvidia-oot build
-  preBuild = ''
-    # Create symlink for hwpm in nvidia-oot if it doesn't exist
-    if [ -d hwpm ] && [ ! -e nvidia-oot/drivers/platform/tegra/hwpm ]; then
-      echo "Creating symlink for hwpm in nvidia-oot"
-      mkdir -p nvidia-oot/drivers/platform/tegra/
-      ln -s $PWD/hwpm/drivers/tegra/hwpm nvidia-oot/drivers/platform/tegra/hwpm
+  # Build hwpm first to generate Module.symvers, then build nvidia-oot
+  buildPhase = ''
+    runHook preBuild
+    
+    # First build hwpm to generate Module.symvers
+    echo "Building hwpm to generate Module.symvers..."
+    make -j $NIX_BUILD_CORES \
+      ARCH=arm64 \
+      -C ${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
+      M=$PWD/hwpm/drivers/tegra/hwpm \
+      CONFIG_TEGRA_OOT_MODULE=m \
+      srctree.hwpm=$PWD/hwpm \
+      srctree.nvconftest=$PWD/out/nvidia-conftest \
+      modules
+    
+    # Check if Module.symvers was generated
+    if [ -f hwpm/drivers/tegra/hwpm/Module.symvers ]; then
+      echo "HWPM Module.symvers generated successfully"
+    else
+      echo "Warning: HWPM Module.symvers not found, checking other locations..."
+      find hwpm -name "Module.symvers" -type f
     fi
     
-    # Ensure hwpm is included in the build
-    if [ -f nvidia-oot/drivers/platform/tegra/Makefile ] && ! grep -q "hwpm" nvidia-oot/drivers/platform/tegra/Makefile; then
-      echo "Adding hwpm to nvidia-oot platform/tegra Makefile"
-      echo "obj-m += hwpm/" >> nvidia-oot/drivers/platform/tegra/Makefile
-    fi
+    # Now build the rest using the Makefile
+    echo "Building nvidia-oot and other modules..."
+    make -j $NIX_BUILD_CORES modules \
+      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
+      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build
     
-    # Copy hwpm headers to nvidia-oot include path
-    if [ -d hwpm/include ]; then
-      echo "Copying hwpm headers to nvidia-oot"
-      mkdir -p nvidia-oot/include
-      cp -r hwpm/include/* nvidia-oot/include/
-    fi
+    runHook postBuild
+  '';
+
+  # Custom install phase to avoid installing duplicate hwpm module
+  installPhase = ''
+    runHook preInstall
+    
+    # Install modules using make modules_install
+    make modules_install \
+      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
+      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
+      INSTALL_MOD_PATH=$out
+    
+    # Remove duplicate hwpm module to prevent collision
+    echo "Removing duplicate hwpm module to prevent collision..."
+    find $out -name "nvhwpm.ko*" | while read hwpm_module; do
+      echo "Found hwpm module at: $hwpm_module"
+      # Keep only one copy - prefer the one in nvidia-oot
+      if [[ "$hwpm_module" =~ "hwpm/drivers/tegra/hwpm" ]]; then
+        echo "Removing standalone hwpm module: $hwpm_module"
+        rm -f "$hwpm_module"
+      fi
+    done
+    
+    runHook postInstall
   '';
 
   # # GCC 14.2 seems confused about DRM_MODESET_LOCK_ALL_BEGIN/DRM_MODESET_LOCK_ALL_END in nvdisplay/kernel-open/nvidia-drm/nvidia-drm-drv.c:1344
   # extraMakeFlags = [ "KCFLAGS=-Wno-error=unused-label" ];
-
-  buildFlags = [ "modules" ];
-  installTargets = [ "modules_install" ];
 })
