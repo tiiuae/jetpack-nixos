@@ -1,21 +1,22 @@
-{
-  stdenv,
-  kernel,
-  runCommand,
-  fetchurl,
-  lib,
-  buildPackages,
-  gitRepos,
-  l4tVersion
+{ stdenv
+, kernel
+, runCommand
+, fetchurl
+, lib
+, buildPackages
+, gitRepos
+, l4tVersion
 }:
 let
-  src = if l4tVersion == "36.4.3" then
-    fetchurl {
-      url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/sources/public_sources.tbz2";
-      hash = "sha256-LBd4BGeePtZQ2r7G+pWDiFeYlvFwVwxhcaG2w4ZmkhY=";
-    }
-  else
-    throw "Not supported l4tVersion version";
+  src =
+    if l4tVersion == "36.4.3" then
+      fetchurl
+        {
+          url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/sources/public_sources.tbz2";
+          hash = "sha256-LBd4BGeePtZQ2r7G+pWDiFeYlvFwVwxhcaG2w4ZmkhY=";
+        }
+    else
+      throw "Not supported l4tVersion version";
 
   source = runCommand "nvidia-oot-source" { } ''
     tar xf ${src}
@@ -79,9 +80,10 @@ stdenv.mkDerivation {
       "CROSS_COMPILE=${stdenv.cc}/bin/${stdenv.cc.targetPrefix}"
     ];
 
-  CROSS_COMPILE = lib.optionalString (
-    stdenv.hostPlatform != stdenv.buildPlatform
-  ) "${stdenv.cc}/bin/${stdenv.cc.targetPrefix}";
+  CROSS_COMPILE = lib.optionalString
+    (
+      stdenv.hostPlatform != stdenv.buildPlatform
+    ) "${stdenv.cc}/bin/${stdenv.cc.targetPrefix}";
 
   hardeningDisable = [ "pic" ];
 
