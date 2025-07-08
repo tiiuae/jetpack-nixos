@@ -97,19 +97,26 @@ stdenv.mkDerivation (finalAttrs: {
 
   # Remove duplicate hwpm module to prevent collision
   postInstall = ''
-    # Find all nvhwpm.ko* files
+    echo "=== Searching for hwpm modules ==="
+    find $out -name "*hwpm*" -type f | while read -r f; do
+      echo "Found: $f"
+    done
+    
+    # Find all nvhwpm.ko* files (including compressed)
     hwpm_files=$(find $out -name "nvhwpm.ko*" -type f || true)
     hwpm_count=$(echo "$hwpm_files" | grep -c . || echo 0)
     
+    echo "Found $hwpm_count hwpm module files:"
+    echo "$hwpm_files"
+    
     if [ "$hwpm_count" -gt 1 ]; then
-      echo "Found $hwpm_count hwpm modules, removing duplicates..."
-      # Keep the one in nvidia-oot, remove standalone
-      echo "$hwpm_files" | while read -r hwpm_module; do
-        if [[ "$hwpm_module" =~ "/hwpm/drivers/tegra/hwpm/" ]]; then
-          echo "Removing standalone hwpm module: $hwpm_module"
-          rm -f "$hwpm_module"
-        fi
-      done
+      echo "Removing duplicate hwpm modules..."
+      # Remove the standalone hwpm module, keep the one in nvidia-oot
+      find $out -path "*/hwpm/drivers/tegra/hwpm/nvhwpm.ko*" -type f -exec rm -v {} \;
+    elif [ "$hwpm_count" -eq 0 ]; then
+      echo "WARNING: No hwpm modules found!"
+    else
+      echo "Only one hwpm module found, no duplicates to remove"
     fi
   '';
 
