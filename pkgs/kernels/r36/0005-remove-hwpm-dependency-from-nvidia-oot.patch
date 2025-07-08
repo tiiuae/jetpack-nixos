@@ -1,0 +1,39 @@
+diff --git a/source/Makefile b/source/Makefile
+index 602ddf0..8f4e0e4 100644
+--- a/source/Makefile
++++ b/source/Makefile
+@@ -52,13 +52,8 @@ endif
+ 
+ hwpm: conftest
+ 	@if [ ! -d "$(MAKEFILE_DIR)/hwpm" ] ; then \
+-		echo "Directory hwpm is not found, exiting.."; \
+-		false; \
++		echo "hwpm is built as part of nvidia-oot, skipping separate build"; \
++		exit 0; \
+ 	fi
+-	@echo   "================================================================================"
+-	@echo   "make $(MAKECMDGOALS) - hwpm ..."
+-	@echo   "================================================================================"
+-	$(MAKE) -j $(NPROC) ARCH=arm64 \
+-		-C $(KERNEL_OUTPUT) \
+-		M=$(MAKEFILE_DIR)/hwpm/drivers/tegra/hwpm \
+-		CONFIG_TEGRA_OOT_MODULE=m \
+-		srctree.hwpm=$(MAKEFILE_DIR)/hwpm \
+-		srctree.nvconftest=$(NVIDIA_CONFTEST) \
+-		$(MAKECMDGOALS)
++	@echo "hwpm is built as part of nvidia-oot, skipping separate build"
+ 
+-nvidia-oot: conftest hwpm
++nvidia-oot: conftest
+ 	@if [ ! -d "$(MAKEFILE_DIR)/nvidia-oot" ] ; then \
+ 		echo "Directory nvidia-oot is not found, exiting.."; \
+ 		false; \
+@@ -82,8 +77,6 @@ nvidia-oot: conftest hwpm
+ 		M=$(MAKEFILE_DIR)/nvidia-oot \
+ 		CONFIG_TEGRA_OOT_MODULE=m \
+ 		srctree.nvidia-oot=$(MAKEFILE_DIR)/nvidia-oot \
+-		srctree.hwpm=$(MAKEFILE_DIR)/hwpm \
+ 		srctree.nvconftest=$(NVIDIA_CONFTEST) \
+-		KBUILD_EXTRA_SYMBOLS=$(MAKEFILE_DIR)/hwpm/drivers/tegra/hwpm/Module.symvers \
+ 		$(MAKECMDGOALS)
+ 

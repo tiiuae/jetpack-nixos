@@ -15,6 +15,7 @@ let
     src = bspSrc;
     patches = [
       ./Makefile.diff
+      ./0005-remove-hwpm-dependency-from-nvidia-oot.patch
     ];
   };
 
