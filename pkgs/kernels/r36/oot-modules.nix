@@ -98,36 +98,9 @@ stdenv.mkDerivation (finalAttrs: {
     export AR="${stdenv.cc.targetPrefix}ar"
     export OBJCOPY="${stdenv.cc.targetPrefix}objcopy"
     
-    # First, run conftest to prepare the build environment
-    echo "Running conftest..."
-    make -f Makefile conftest \
-      KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
-      KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
-      CROSS_COMPILE=${stdenv.cc.targetPrefix}
-    
-    # First build hwpm to generate Module.symvers
-    echo "Building hwpm to generate Module.symvers..."
-    make -j $NIX_BUILD_CORES \
-      ARCH=arm64 \
-      CROSS_COMPILE=${stdenv.cc.targetPrefix} \
-      CC="${stdenv.cc.targetPrefix}cc" \
-      -C ${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build \
-      M=$PWD/hwpm/drivers/tegra/hwpm \
-      CONFIG_TEGRA_OOT_MODULE=m \
-      srctree.hwpm=$PWD/hwpm \
-      srctree.nvconftest=$PWD/out/nvidia-conftest \
-      modules
-    
-    # Check if Module.symvers was generated
-    if [ -f hwpm/drivers/tegra/hwpm/Module.symvers ]; then
-      echo "HWPM Module.symvers generated successfully"
-    else
-      echo "Warning: HWPM Module.symvers not found, checking other locations..."
-      find hwpm -name "Module.symvers" -type f
-    fi
-    
-    # Now build the rest using the Makefile
-    echo "Building nvidia-oot and other modules..."
+    # The main Makefile handles the dependency chain properly: conftest -> hwpm -> nvidia-oot
+    # Let's use it directly instead of trying to manage dependencies manually
+    echo "Building all modules using the main Makefile..."
     make -j $NIX_BUILD_CORES modules \
       ARCH=arm64 \
       CROSS_COMPILE=${stdenv.cc.targetPrefix} \
@@ -137,6 +110,7 @@ stdenv.mkDerivation (finalAttrs: {
       OBJCOPY="${stdenv.cc.targetPrefix}objcopy" \
       KERNEL_HEADERS=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/source \
       KERNEL_OUTPUT=${finalAttrs.kernel.dev}/lib/modules/${finalAttrs.kernel.modDirVersion}/build
+    
     
     runHook postBuild
   '';
