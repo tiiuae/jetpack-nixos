@@ -186,7 +186,7 @@ let
         patchelf --add-rpath ${lib.makeLibraryPath [ libglvnd ]} \
           $out/lib/libEGL_nvidia.so.0 \
           $out/lib/libGLX_nvidia.so.0 ${
-            if l4tMajorMinorPatchVersion == "36.4.3" then
+            if l4tMajorMinorPatchVersion == "36.4.4" then
               ""
             else if l4tMajorMinorPatchVersion == "35.6.0" then
               "$out/lib/libnvidia-vulkan-producer.so"
@@ -213,7 +213,7 @@ let
     postPatch =
       let
         ptxjitcomp =
-          if l4tMajorMinorPatchVersion == "36.4.3" then
+          if l4tMajorMinorPatchVersion == "36.4.4" then
             {
               version = "540.4.0";
               path = "/usr/lib/aarch64-linux-gnu/nvidia";
@@ -432,7 +432,7 @@ let
     buildInputs = [ stdenv.cc.cc.lib l4t-core ];
     postPatch = ''
       # Remove a utility that bring in too many libraries
-      ${(if l4tMajorMinorPatchVersion == "36.4.3" then
+      ${(if l4tMajorMinorPatchVersion == "36.4.4" then
         "rm -f sbin/nv_wpa_supplicant_wifi sbin/wpa_supplicant"
       else if l4tMajorMinorPatchVersion == "35.6.0" then
         ''

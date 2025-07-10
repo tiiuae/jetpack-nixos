@@ -5,8 +5,8 @@
 final: prev:
 let
   inherit (prev) lib;
-  jetpackVersion = "6.2";
-  l4tVersion = "36.4.3";
+  jetpackVersion = "6.2.1";
+  l4tVersion = "36.4.4";
   cudaVersion = "12.6";
 
   sourceInfo = import ./sourceinfo {
@@ -16,7 +16,7 @@ let
   };
 
   uefi-firmware-file =
-    if l4tVersion == "36.4.3" then
+    if l4tVersion == "36.4.4" then
       ./pkgs/uefi-firmware/r36
     else if l4tVersion == "35.6.0" then
       ./pkgs/uefi-firmware/r35
@@ -39,7 +39,7 @@ in
         # https://repo.download.nvidia.com/jetson/
         src = prev.fetchurl {
           url = with prev.lib.versions; "https://developer.download.nvidia.com/embedded/L4T/r${major l4tVersion}_Release_v${minor l4tVersion}.${patch l4tVersion}/release/Jetson_Linux_R${l4tVersion}_aarch64.tbz2";
-          hash = "sha256-lJpEBJxM5qjv31cuoIIMh09u5dQco+STW58OONEYc9I=";
+          hash = "sha256-ps4RwiEAqwl25BmVkYJBfIPWL0JyUBvIcU8uB24BDzs=";
         };
         # We use a more recent version of bzip2 here because we hit this bug
         # extracting nvidia's archives:

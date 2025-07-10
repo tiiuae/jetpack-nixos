@@ -139,7 +139,7 @@ let
       owner = "NVIDIA";
       repo = "edk2-nvidia";
       rev = "r${l4tMajorMinorPatchVersion}";
-      sha256 = "sha256-Ri+0vrxvd7eE7TP/KBM0ET2jX0fupdC3+Dli+IshUP8=";
+      sha256 = "sha256-Hz4IfDotlWRBRad8gfPAUVc2C1+bkTSW04+JpA3aqTY=";
     };
     patches = edk2NvidiaPatches ++ [
       ###### git log r36.4.3-updates ^r36.4.3 ######
@@ -197,7 +197,7 @@ let
     repo = "edk2-nvidia-non-osi";
     name = repo;
     rev = "r${l4tMajorMinorPatchVersion}";
-    sha256 = "sha256-qQs1jO/h6+j9WLfz1OtYpgZutEeX284BlcUKJWvghEE=";
+    sha256 = "sha256-5BjT7kZqU8ek9GC7f1KuomC2JYyWWFMawrZN2CPHGjY=";
   };
 
   pythonEnv = buildPackages.python312.withPackages (ps: callPackage ./pyenv.nix { inherit ps edk2-nvidia; });
