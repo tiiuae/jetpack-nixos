@@ -208,6 +208,14 @@ else
 
         strictDeps = true;
 
+        prePatch = ''
+          sed -i \
+            -e '1iCC = $(CC_FOR_BUILD)' \
+            -e '1iCXX = $(CXX_FOR_BUILD)' \
+            -e '1iLINKER = $(CXX_FOR_BUILD)' \
+            BaseTools/Source/C/Makefiles/header.makefile
+        '';
+
         buildPhase = ''
           runHook preBuild
 
