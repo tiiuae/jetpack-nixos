@@ -7,7 +7,7 @@
 let
 
   l4t-file =
-    if l4tVersion == "36.4.3" then
+    if l4tVersion == "36.4.4" then
       ./l4t-r36-4-3.json
     else if l4tVersion == "35.6.0" then
       ./l4t-r35-6.json

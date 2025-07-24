@@ -9,7 +9,7 @@
 }:
 let
   src =
-    if l4tVersion == "36.4.3" then
+    if l4tVersion == "36.4.4" then
       fetchurl
         {
           url = "https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/sources/public_sources.tbz2";
