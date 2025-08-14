@@ -122,6 +122,7 @@ in
         type = types.enum [
           "generic"
           "devkit"
+          "xavierNXdevkit"
         ];
         default = "generic";
         description = ''
@@ -133,6 +134,15 @@ in
         default = false;
         type = types.bool;
         description = "Enable PREEMPT_RT patches";
+      };
+
+      kernel.version = mkOption {
+         type = types.enum [
+           "bsp-default"
+           "upstream-6-6"
+         ];
+         default = "bsp-default";
+         description = "Kernel version";
       };
 
       mountFirmwareEsp = mkOption {
@@ -450,7 +460,7 @@ in
     }
     (lib.mkIf (jetpackAtLeast "6")
       {
-        hardware.deviceTree.dtbSource = pkgs.nvidia-jetpack.kernelPackages.devicetree;
+#        hardware.deviceTree.dtbSource = pkgs.nvidia-jetpack.kernelPackages.devicetree;
 
         # Nvidia's jammy kernel has downstream apparmor patches which require "apparmor"
         # to appear sufficiently early in the `lsm=<list of security modules>` kernel argument

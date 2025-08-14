@@ -114,9 +114,9 @@ in
         })
 
         (mkIf (cfg.som == "orin-nx" || cfg.som == "orin-nano") {
-          targetBoard = mkDefault "jetson-orin-nano-devkit${lib.optionalString cfg.super "-super"}";
+          #targetBoard = mkDefault "jetson-orin-nano-devkit${lib.optionalString cfg.super "-super"}";
           # Use this instead if you want to use the original Xavier NX Devkit module (p3509-a02)
-          #targetBoard = mkDefault "p3509-a02+p3767-0000";
+          targetBoard = mkDefault "p3509-a02-p3767-0000";
           partitionTemplate = mkDefault "${pkgs.nvidia-jetpack.bspSrc}/bootloader/${partitionTemplateDirectory}/cfg/flash_t234_qspi.xml";
         })
 

@@ -37,7 +37,8 @@ final: prev: (
         inherit (config.boot.loader.efi) efiSysMountPoint;
 
         # uefi-firmware can be evaluated only if som is set
-        expectedBiosVersion = if (cfg.som != "generic") then finalJetpack.uefi-firmware.biosVersion else "Unknown";
+        expectedBiosVersion = (if ((cfg.som) != "generic") then finalJetpack.uefi-firmware.biosVersion else "Unknown");
+        # expectedBiosVersion = "Unknown";
       };
 
       uefi-firmware = prevJetpack.uefi-firmware.override ({
@@ -61,7 +62,7 @@ final: prev: (
               uefi-firmware = null;
             })).bup;
           in
-          builtins.hashString "sha256" "${cursedBup}";
+            builtins.hashString "sha256" "${cursedBup}";
       } // lib.optionalAttrs cfg.firmware.uefi.capsuleAuthentication.enable {
         inherit (cfg.firmware.uefi.capsuleAuthentication) trustedPublicCertPemFile;
       });

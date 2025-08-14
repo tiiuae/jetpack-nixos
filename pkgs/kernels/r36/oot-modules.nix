@@ -67,6 +67,8 @@ let
       # See bspSrc/source/source_sync.sh symlink at end of file
       + ''
         ln -vsrf "$out/nvethernetrm" "$out/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm"
+        sed -i '7571s/.*/return register_shrinker(s, \\\"%s\\", name);/' "$out"/nvidia-oot/scripts/conftest/conftest.sh
+        head -n 7575 "$out"/nvidia-oot/scripts/conftest/conftest.sh | tail -n 20
       ''
     );
 in

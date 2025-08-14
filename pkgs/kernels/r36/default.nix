@@ -8,12 +8,14 @@
 , argsOverride ? { }
 , buildLinux
 , gitRepos
+, fetchgit
+, fetchpatch
 , ...
 }@args:
 buildLinux (args // {
   # See Makefile in kernel source root for VERSION/PATCHLEVEL/SUBLEVEL.
-  version = "5.15.148";
-  extraMeta.branch = "5.15";
+  version = "6.6.75";
+  extraMeta.branch = "6.6";
 
   defconfig = "defconfig";
 
@@ -32,21 +34,82 @@ buildLinux (args // {
 
   # Using applyPatches here since it's not obvious how to append an extra
   # postPatch. This is not very efficient.
-  src = gitRepos."kernel/kernel-jammy-src";
+  src = applyPatches {
+    src = fetchgit {
+      url = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git";
+      hash = "sha256-1m3vRZvfIgPtoyelnFy2tPfYFHa4k3KxGC30ue5p6p4=";
+      rev = "d51b7d37f14e76db7a1a13046ed87198c0407fcb";
+    };
+
+    patches = [
+
+      (fetchpatch {
+        name = "memory: tegra: Add Tegra234 clients for RCE and VI";
+        url = "https://github.com/torvalds/linux/commit/9def28f3b8634e4f1fa92a77ccb65fbd2d03af34.patch";
+        hash = "sha256-WZwKGL0kPZ3SxwdW3oi7Z3Tc0BMuuOuL9/HlLzg73q8=";
+      })
+
+      (fetchpatch {
+        name = "hwmon: (ina3221) Add support for channel summation disable";
+        url = "https://github.com/torvalds/linux/commit/7b64906c98fe503338066b97d3ff2dad65debf2b.patch";
+        hash = "sha256-SB2zipFoJQsOjuKUFV8W1PBi8J8qTgdZcuPI3lNvGuA=";
+      })
+
+      (fetchpatch {
+        name = "cpufreq: tegra194: save CPU data to avoid repeated SMP calls";
+        url = "https://github.com/torvalds/linux/commit/6b121b4cf7e1f598beecf592d6184126b46eca46.patch";
+        hash = "sha256-/v73qEkT3nrdzMDQZCbSMeacLSgj5aZTwnhvM1lFd+w=";
+      })
+
+      (fetchpatch {
+        name = "cpufreq: tegra194: use refclk delta based loop instead of udelay";
+        url = "https://github.com/torvalds/linux/commit/a60a556788752a5696960ed11409a552b79e68e8.patch";
+        hash = "sha256-ZvogH5F3dUGHVXcpqhxbDah1Llc13J7SOYVVbJpstTw=";
+      })
+
+      (fetchpatch {
+        name = "cpufreq: tegra194: remove redundant AND with cpu_online_mask";
+        url = "https://github.com/torvalds/linux/commit/c12f0d0ffade589599a43b0d0f0965579ca80f76.patch";
+        hash = "sha256-iiW20hwMQS/B6F1I3O5KwMdIVYrdOwSPzKrB5juaxMY=";
+      })
+
+      (fetchpatch {
+        name = "fbdev/simplefb: Support memory-region property";
+        url = "https://github.com/torvalds/linux/commit/8ddfc01ace51c85a2333fb9a9cbea34d9f87885d.patch";
+        hash = "sha256-rMk0BIjOsc21HFF6Wx4pngnldp/LB0ODbUFGRDjtsUw=";
+      })
+
+      (fetchpatch {
+        name = "fbdev/simplefb: Add support for generic power-domains";
+        url = "https://github.com/torvalds/linux/commit/92a511a568e44cf11681a2223cae4d576a1a515d.patch";
+        hash = "sha256-GOo7OLQObixVEKguiEzp1xLMlqE0QMQVhx8ygwkNb9M=";
+      })
+    ];
+  };
   autoModules = false;
   features = { }; # TODO: Why is this needed in nixpkgs master (but not NixOS 22.05)?
 
   kernelPatches = [
-    {
-      name = "ipu: Depend on x86";
-      patch = ./0001-ipu-Depend-on-x86.patch;
-    }
+    # {
+    #   name = "ipu: Depend on x86";
+    #   patch = ./0001-ipu-Depend-on-x86.patch;
+    # }
   ] ++ kernelPatches;
 
   structuredExtraConfig = with lib.kernel; {
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
     # Otherwise, nvidia's driver craps out
     CMA_SIZE_MBYTES = lib.mkForce (freeform "64");
+
+    ARM64_PMEM = yes;
+    PCIE_TEGRA194 = yes;
+    PCIE_TEGRA194_HOST = yes;
+    BLK_DEV_NVME = yes;
+    NVME_CORE = yes;
+    FB_SIMPLE = yes;
+        USB_ONBOARD_HUB = no;
+            ISO9660 = module;
+    USB_UAS = yes;
 
     ### So nat.service and firewall work ###
     NF_TABLES = module; # This one should probably be in common-config.nix
@@ -92,9 +155,6 @@ buildLinux (args // {
     MD_RAID1 = module;
     MD_RAID10 = module;
     MD_RAID456 = module;
-
-    # Needed for booting from USB
-    USB_UAS = module;
 
     FW_LOADER_COMPRESS_XZ = yes;
     FW_LOADER_COMPRESS_ZSTD = yes;
