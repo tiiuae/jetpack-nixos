@@ -173,7 +173,7 @@ in
         # TODO: Having these options enabled on the Orin NX currently causes a
         # kernel panic with a failure in tegra_xudc_unpowergate. We should figure
         # this out
-        extraStructuredConfig = with lib.kernel; {
+        structuredExtraConfig = with lib.kernel; {
           USB_OTG = no;
           USB_GADGET = no;
         };
