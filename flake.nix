@@ -79,6 +79,7 @@
               { som = "orin-agx"; carrierBoard = "devkit"; }
               { som = "orin-agx-industrial"; carrierBoard = "devkit"; }
               { som = "orin-nx"; carrierBoard = "devkit"; }
+              { som = "orin-nx"; carrierBoard = "xavierNXdevkit"; }
               { som = "orin-nano"; carrierBoard = "devkit"; }
               { som = "orin-nx"; carrierBoard = "devkit"; super = true; }
               { som = "orin-nano"; carrierBoard = "devkit"; super = true; }
