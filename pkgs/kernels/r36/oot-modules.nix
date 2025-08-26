@@ -68,6 +68,10 @@ let
       + ''
         ln -vsrf "$out/nvethernetrm" "$out/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm"
       ''
+      # Kind of hack: Jetson 36.4.4. conftest fails when gcc 14 is used
+      + lib.optionals (l4tMajorMinorPatchVersion == "36.4.4") ''
+        sed -i '7571s/.*/return register_shrinker(s, \\\"%s\\", name);/' "$out"/nvidia-oot/scripts/conftest/conftest.sh
+      ''
     );
 in
 stdenv.mkDerivation (finalAttrs: {
