@@ -162,7 +162,7 @@ let
       echo NvOsLibraryLoad NvOsLibraryLoad_3d > $remapFile
       for lib in $(find ./lib -name "*.so*"); do
         if isELF $lib; then
-          ${lib.getExe patchelfUnstable} "$lib" \
+          ${lib.getExe buildPackages.patchelfUnstable} "$lib" \
             --rename-dynamic-symbols "$remapFile" \
             --replace-needed libnvos.so libnvos_3d.so
         fi
@@ -359,7 +359,7 @@ let
       echo NvOsLibraryLoad NvOsLibraryLoad_multimedia > $remapFile
       for lib in $(find ./lib -name "*.so*"); do
         if isELF $lib; then
-          ${lib.getExe patchelfUnstable} "$lib" \
+          ${lib.getExe buildPackages.patchelfUnstable} "$lib" \
             --rename-dynamic-symbols "$remapFile" \
             --replace-needed libnvos.so libnvos_multimedia.so
         fi
