@@ -18,6 +18,12 @@
 
 let
   atfSrc = gitRepos."tegra/optee-src/atf";
+  pkvmSrc = fetchgit {
+    url = "https://github.com/tiiuae/atf-nvidia-jetson.git";
+    hash = "sha256-ZFbNrZzBOg6NDAKI3iMU1Cdyl8t9VisL850KlQI6ANw=";
+    rev = "452012cbd819685f5745b85b405d8a97dbc97a59";
+  };
+
   nvopteeSrc = gitRepos."tegra/optee-src/nv-optee";
 
   opteeClient = stdenv.mkDerivation {
@@ -243,7 +249,7 @@ let
     stdenv.mkDerivation {
       pname = "arm-trusted-firmware";
       version = l4tMajorMinorPatchVersion;
-      src = atfSrc;
+      src = pkvmSrc;
       makeFlags = [
         "-C arm-trusted-firmware"
         "BUILD_BASE=$(PWD)/build"

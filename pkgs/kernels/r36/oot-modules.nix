@@ -1,3 +1,14 @@
+#
+# NOTE! Contains PKVM patches
+#
+#
+
+# PKVM
+
+#
+# NOTE! Contains PKVM patches
+#
+
 { applyPatches
 , bspSrc
 , buildPackages
@@ -7,6 +18,7 @@
 , lib
 , runCommand
 , stdenv
+, fetchpatch
 , ...
 }:
 let
@@ -31,6 +43,48 @@ let
       patches = [
         ./0001-rtl8822ce-Fix-Werror-address.patch
         ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
+
+        #
+        # START: PKVM patches
+        #
+        (fetchpatch {
+          name = "nvvrs-pseq-rtc: Fix unbalanced mutex_unlock()";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/17388e6f24bb4b1d8ad5bdf64226ab6286da96e1.patch";
+          hash = "sha256-bsgEPHmBCnTZKDSKmIrQg5HdxI5ERDuJS5UscbiXWC0=";
+        })
+
+        (fetchpatch {
+          name = "tegra23x_perf_uncore: Fix double free bug";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/45a23b4c6eba2e470bf95a3f34fed336c8b5a45d.patch";
+          hash = "sha256-qBXbFkqJf6IIR5GrI5UVkJCMTfMY603OoucUV7G8yXE=";
+        })
+
+        (fetchpatch {
+          name = "tegra23x_perf_uncore: don’t claim PERF_TYPE_HARDWARE";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/9b204daf35f86752c9a135e7d013d1bd0f0f539d.patch";
+          hash = "sha256-o4l1wm9kLwPhsL1Dup0ac1XVOryqfCROAY4g59AhXFw=";
+        })
+
+        (fetchpatch {
+          name = "tegra23x_perf_uncore: enforce CPU0 and expose cpumask in sysfs";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/ea69f9653341f971cdd044541b8370b3b7c14ab1.patch";
+          hash = "sha256-RW1aHf0tXxhNYyJ6Z3dH/CmECDCWGkdNadHBE77rA0M=";
+        })
+
+        (fetchpatch {
+          name = "tegra23x_perf_uncore: reject NV_INT_* pseudo-IDs";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/e63767db5cb0bb5eb56d5d30f6f4ba97ba81412f.patch";
+          hash = "sha256-LWd/RCE3ycNw4nBcMgsJeOJHqATFIf9jEMmAyuQ8X8Q=";
+        })
+
+        (fetchpatch {
+          name = "tegra23x_perf_uncore: only claim events explicitly targeting this PMU type";
+          url = "https://github.com/tiiuae/nvidia-oot-jetson/commit/1d18f351e42bcb9dbcc6da858ae55c20f912151d.patch";
+          hash = "sha256-e6weQTt1SXwK/sfbRL8XuVWSUm9YbNfmlzYana7iPX4=";
+        })
+        #
+        # END: PKVM patches
+        #
       ];
     })
     (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
