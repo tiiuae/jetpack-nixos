@@ -21,7 +21,11 @@ let
     _cuda.db.allSortedCudaCapabilities;
   hasJetsonCudaCapability =
     intersectLists jetsonCudaCapabilities (final.config.cudaCapabilities or [ ]) != [ ];
-  redistSystem = _cuda.lib.getRedistSystem hasJetsonCudaCapability final.stdenv.hostPlatform.system;
+  redistSystem = _cuda.lib.getRedistSystem {
+    cudaCapabilities = if hasJetsonCudaCapability then jetsonCudaCapabilities else [];
+    cudaMajorMinorVersion = final.cudaPackages.cudaMajorMinorVersion or "11.4";
+    system = final.stdenv.hostPlatform.system;
+  };
 in
 {
   nvidia-jetpack5 = import ./mk-overlay.nix
