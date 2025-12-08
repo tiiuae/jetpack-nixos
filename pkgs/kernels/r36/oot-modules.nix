@@ -1,13 +1,14 @@
-{ applyPatches
-, bspSrc
-, buildPackages
-, gitRepos
-, kernel
-, l4tMajorMinorPatchVersion
-, lib
-, runCommand
-, stdenv
-, ...
+{
+  applyPatches,
+  bspSrc,
+  buildPackages,
+  gitRepos,
+  kernel,
+  l4tMajorMinorPatchVersion,
+  lib,
+  runCommand,
+  stdenv,
+  ...
 }:
 let
   patchedBsp = applyPatches {
@@ -32,6 +33,7 @@ let
         ./0001-rtl8822ce-Fix-Werror-address.patch
         ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
         ./0003-Fix-conftest-use-with-gcc15.patch
+        ./0001-Fix-register_shrinker_has_fmt_arg-conftest.patch
       ];
     })
     (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
@@ -43,6 +45,7 @@ let
         ./0002-ANDURIL-Add-some-missing-BASE_CFLAGS.patch
         ./0003-ANDURIL-Update-drm_gem_object_vmap_has_map_arg-test.patch
         ./0004-ANDURIL-override-KERNEL_SOURCES-and-KERNEL_OUTPUT-if.patch
+        ./0001-Add-of_property_for_each_u32_removed_internal_args-c.patch
       ];
     })
     (applyPatches {
@@ -56,20 +59,19 @@ let
     })
   ];
 
-  l4t-oot-modules-sources = runCommand "l4t-oot-sources" { }
-    (
-      # Copy the Makefile
-      ''
-        mkdir -p "$out"
-        cp "${patchedBsp}/source/Makefile" "$out/Makefile"
-      ''
-      # copy the projects
-      + lib.strings.concatMapStringsSep "\n" mkCopyProjectCommand l4t-oot-projects
-      # See bspSrc/source/source_sync.sh symlink at end of file
-      + ''
-        ln -vsrf "$out/nvethernetrm" "$out/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm"
-      ''
-    );
+  l4t-oot-modules-sources = runCommand "l4t-oot-sources" { } (
+    # Copy the Makefile
+    ''
+      mkdir -p "$out"
+      cp "${patchedBsp}/source/Makefile" "$out/Makefile"
+    ''
+    # copy the projects
+    + lib.strings.concatMapStringsSep "\n" mkCopyProjectCommand l4t-oot-projects
+    # See bspSrc/source/source_sync.sh symlink at end of file
+    + ''
+      ln -vsrf "$out/nvethernetrm" "$out/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm"
+    ''
+  );
 in
 stdenv.mkDerivation {
   __structuredAttrs = true;
