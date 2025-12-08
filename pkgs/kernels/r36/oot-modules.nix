@@ -31,6 +31,7 @@ let
         ./patches/nvidia-oot/0005-Fix-header-guard-in-halfrf_ops_rtl8852c.h.patch
         ./patches/nvidia-oot/0001-crypto-tegra-Disable-softirqs-before-finalizing-requ.patch
         ./patches/nvidia-oot/0001-Lower-priority-of-tegra-se-crypto.patch
+        ./patches/nvidia-oot/0001-Fix-register_shrinker_has_fmt_arg-conftest.patch
       ];
     };
     nvgpu = gitRepos.nvgpu;
