@@ -31,6 +31,7 @@ let
       patches = [
         ./0001-rtl8822ce-Fix-Werror-address.patch
         ./0002-sound-Fix-include-path-for-tegra-virt-alt-include.patch
+        ./0001-Fix-register_shrinker_has_fmt_arg-conftest.patch
       ];
     })
     (gitRepos.nvgpu.overrideAttrs { name = "nvgpu"; })
@@ -42,6 +43,7 @@ let
         ./0002-ANDURIL-Add-some-missing-BASE_CFLAGS.patch
         ./0003-ANDURIL-Update-drm_gem_object_vmap_has_map_arg-test.patch
         ./0004-ANDURIL-override-KERNEL_SOURCES-and-KERNEL_OUTPUT-if.patch
+        ./0001-Add-of_property_for_each_u32_removed_internal_args-c.patch
       ];
     })
     (applyPatches {
