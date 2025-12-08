@@ -22,6 +22,7 @@ final: prev: (
     flashTools = cfg.flasherPkgs.callPackages (import ./device-pkgs { inherit config; pkgs = final; }) { };
   in
   {
+    kernelVersion = cfg.kernel.version;
     nvidia-jetpack = prev.nvidia-jetpack.overrideScope (finalJetpack: prevJetpack: {
       socType =
         if cfg.som == null then null
