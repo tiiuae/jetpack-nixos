@@ -1,6 +1,7 @@
-{ stdenv
-, lib
-, buildPackages
+{
+  stdenv,
+  lib,
+  buildPackages,
 }:
 
 # For some unknown reason multiple Nvidia libraries hard code dlopen paths.
@@ -37,10 +38,10 @@ let
       substituteInPlace dlopenoverride.c \
           --replace-fail \
             '@oldpaths@' \
-            '${ builtins.concatStringsSep "\",\"" oldPaths }' \
+            '${builtins.concatStringsSep "\",\"" oldPaths}' \
           --replace-fail \
             '@newpaths@' \
-            '${ builtins.concatStringsSep "\",\"" newPaths }' \
+            '${builtins.concatStringsSep "\",\"" newPaths}' \
           --replace-fail \
             '__dlopen' \
             '${dlopenUnique}'
@@ -49,7 +50,7 @@ let
     buildPhase = ''
       runHook preBuild
 
-      cc -shared -fPIC -o dlopen-override.so dlopenoverride.c -ldl
+      $CC -shared -fPIC -o dlopen-override.so dlopenoverride.c -ldl
 
       runHook postBuild
     '';
