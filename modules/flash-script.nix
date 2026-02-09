@@ -309,6 +309,12 @@ in
           description = "Additional commands to be added to the flash script while it is being constructed.";
         };
 
+        postFlashDeviceCommands = mkOption {
+          type = types.lines;
+          default = "";
+          description = "Additional commands to run after device flash, before reboot.";
+        };
+
         additionalInitrdFlashModules = mkOption {
           type = types.listOf types.str;
           default = config.boot.initrd.availableKernelModules;
