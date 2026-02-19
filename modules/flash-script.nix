@@ -214,7 +214,7 @@ in
         # Firmware variants. For most normal usage, you shouldn't need to set this option
         variants = lib.mkOption {
           internal = true;
-          type = types.listOf (types.submodule ({ config, name, ... }: {
+          type = types.listOf (types.submodule {
             options = {
               boardid = lib.mkOption {
                 type = types.str;
@@ -246,7 +246,7 @@ in
                 default = null;
               };
             };
-          }));
+          });
         };
       };
 

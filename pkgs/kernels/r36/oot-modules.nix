@@ -1,14 +1,13 @@
-{
-  applyPatches,
-  bspSrc,
-  buildPackages,
-  gitRepos,
-  kernel,
-  l4tMajorMinorPatchVersion,
-  lib,
-  runCommand,
-  stdenv,
-  ...
+{ applyPatches
+, bspSrc
+, buildPackages
+, gitRepos
+, kernel
+, l4tMajorMinorPatchVersion
+, lib
+, runCommand
+, stdenv
+, ...
 }:
 let
   patchedBsp = applyPatches {
