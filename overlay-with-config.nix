@@ -22,6 +22,7 @@ final: prev: (
     flashTools = cfg.flasherPkgs.callPackages (import ./device-pkgs { inherit config; pkgs = final; }) { };
   in
   {
+    kernelVersion = cfg.kernel.version;
     nvidia-jetpack = prev.nvidia-jetpack.overrideScope (finalJetpack: prevJetpack: {
       socType =
         if cfg.som == null then null
@@ -65,13 +66,18 @@ final: prev: (
         # uefi-firmware.  We do a fancy override scope here to make a version
         # of the bup that is otherwise identical, but does not depend on
         # uefi-firmware. The level of magic here can be frightening.
-        uniqueHash =
-          let
-            cursedBup = (finalJetpack.overrideScope (a: b: {
-              uefi-firmware = null;
-            })).bup;
-          in
-          builtins.hashString "sha256" "${cursedBup}";
+
+        # uniqueHash =
+        #   let
+        #     cursedBup = (finalJetpack.overrideScope (a: b: {
+        #       uefi-firmware = null;
+        #     })).bup;
+        #   in
+        #   builtins.hashString "sha256" "${cursedBup}";
+
+        # FIXME: Temporary workaround for infinite recursion
+        # The cursedBup override doesn't properly break the circular dependency
+        uniqueHash = "temporary-hash-${builtins.hashString "sha256" "${cfg.som}-${cfg.carrierBoard}-${cfg.flashScriptOverrides.targetBoard or "default"}"}";
       } // lib.optionalAttrs cfg.firmware.uefi.capsuleAuthentication.enable {
         inherit (cfg.firmware.uefi.capsuleAuthentication) trustedPublicCertPemFile;
       });
@@ -166,7 +172,9 @@ final: prev: (
             # outside the context of this nixos config (which has an
             # aarch64-linux package-set).
             if ${lib.getExe finalJetpack.flashFromDevice} ${finalJetpack.signedFirmware}; then
-              echo "Flashing platform firmware successful. Rebooting now."
+              echo "Flashing platform firmware successful."
+              ${cfg.flashScriptOverrides.postFlashDeviceCommands}
+              echo "Rebooting now."
               sync
               reboot -f
             else

@@ -149,16 +149,16 @@ in
       # Orin isn't supported on JetPack 7 at the moment so use the newest version available.
       tensorrt = final._cuda.manifests.tensorrt."10.14.1";
     };
+    # Override cudaCapabilities to avoid assertion failures on non-aarch64 platforms.
+    config = prevArgs.config // {
+      cudaCapabilities =
+        if system == "aarch64-linux"
+        then prevArgs.config.cudaCapabilities or [ ]
+        else [ ];
+    };
   });
 
   cudaPackages = final.cudaPackages_11;
-
-  # TODO: Remove this once there's an official OpenCV release supporting CUDA 13
-  opencv =
-    if final.cudaPackages.cudaAtLeast "13" && system == "aarch64-linux" then
-      final.nvidia-jetpack.l4t-opencv
-    else
-      prev.opencv;
 
   _cuda = prev._cuda.extend (_: prevCuda: {
     extensions = prevCuda.extensions ++ [
