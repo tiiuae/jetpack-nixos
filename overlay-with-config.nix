@@ -91,7 +91,7 @@ final: prev: (
       taDevKit = finalJetpack.buildOpteeTaDevKit tosArgs;
       pkcs11Ta = finalJetpack.buildPkcs11Ta tosArgs;
       opteeXtest = finalJetpack.buildOpteeXtest tosArgs;
-      inherit (finalJetpack.tosImage) nvLuksSrv hwKeyAgent;
+      inherit (finalJetpack.tosImage) nvLuksSrv hwKeyAgent ftpmHelper;
 
       flashInitrd =
         let
