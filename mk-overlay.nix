@@ -112,6 +112,7 @@ makeScope final.newScope (self: {
     uefi-firmware jetsonStandaloneMMOptee;
 
   genEkb = self.callPackage ./pkgs/optee/gen-ekb.nix { };
+  ftpmSimTooling = self.callPackage ./pkgs/optee/ftpm-sim-tooling.nix { };
 
   flash-tools = self.callPackage ./pkgs/flash-tools { };
 
