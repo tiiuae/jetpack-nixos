@@ -3,6 +3,13 @@
 , dbus
 , expat
 , fontconfig
+, libice
+, libsm
+, libxcb
+, libxcomposite
+, libxdamage
+, libxfixes
+, libxtst
 , ncurses5
 , noto-fonts
 , nsight_systems_target
@@ -14,7 +21,6 @@
 , requireFile
 , stdenv
 , xkeyboard_config
-, xorg
 ,
 }:
 let
@@ -86,18 +92,18 @@ buildFHSEnv {
     (
       [
         ncurses5
-        xorg.libxcb
+        libxcb
         fontconfig
         noto-fonts
         dbus
         nss
-        xorg.libXcomposite
-        xorg.libXdamage
+        libxcomposite
+        libxdamage
         alsa-lib
-        xorg.libXtst
-        xorg.libSM
-        xorg.libICE
-        xorg.libXfixes
+        libxtst
+        libsm
+        libice
+        libxfixes
         xkeyboard_config
         expat
         nspr

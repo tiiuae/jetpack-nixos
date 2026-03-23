@@ -8,13 +8,12 @@
 , libxkbcommon
 , stdenv
 , wayland
-, xorg
+, libx11
+, libxau
 , l4tAtLeast
 }:
 # TODO: Add wayland and x11 tests for graphics demos....
 let
-  inherit (xorg) libX11 libXau;
-
   repo = if l4tAtLeast "38" then "som" else "t234";
 in
 stdenv.mkDerivation {
@@ -25,7 +24,7 @@ stdenv.mkDerivation {
   sourceRoot = "source/usr/src/nvidia/graphics_demos";
 
   nativeBuildInputs = [ dpkg ];
-  buildInputs = [ libX11 libGL libXau libdrm wayland libxkbcommon libffi ];
+  buildInputs = [ libx11 libGL libxau libdrm wayland libxkbcommon libffi ];
 
   postPatch = ''
     substituteInPlace Makefile.l4tsdkdefs \
