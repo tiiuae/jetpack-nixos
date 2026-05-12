@@ -157,7 +157,7 @@ let
   };
 
   flashScript = writeShellApplication {
-    name = "flash-${hostName}";
+    name = "flash-${cfg.name}";
     runtimeInputs = [
       coreutils
       extractSignedOrinArtifacts
@@ -167,7 +167,7 @@ let
 
       usage() {
         cat <<'USAGE'
-      Usage: flash-${hostName} [options] [-s <signed-sd-image>]
+      Usage: flash-${cfg.name} [options] [-s <signed-sd-image>]
 
         -s, --signed-sd-image DIR   Path to signed sd-image result directory.
                                     When provided, signed boot artifacts are automatically
@@ -237,7 +237,7 @@ let
         export SIGNED_SD_IMAGE_DIR="$signed_sd_image"
       fi
 
-      "${legacyFlashScript}/bin/flash-${hostName}" "$@"
+      "${legacyFlashScript}/bin/flash-${cfg.name}" "$@"
       status=$?
       cleanup
       exit $status
