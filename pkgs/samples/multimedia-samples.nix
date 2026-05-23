@@ -20,7 +20,7 @@
 , python3
 , vulkan-headers
 , vulkan-loader
-, xorg
+, libx11
 }:
 # https://docs.nvidia.com/jetson/l4t-multimedia/group__l4t__mm__test__group.html
 let
@@ -30,7 +30,6 @@ let
     cudatoolkit
     tensorrt
     ;
-  inherit (xorg) libX11;
 in
 backendStdenv.mkDerivation {
   __structuredAttrs = true;
@@ -51,7 +50,7 @@ backendStdenv.mkDerivation {
     l4t-multimedia
     libdrm
     libglvnd
-    libX11
+    libx11
     opencv
     pango
     tensorrt
