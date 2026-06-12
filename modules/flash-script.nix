@@ -332,6 +332,31 @@ in
             issues `reboot -f` immediately after this hook returns.
           '';
         };
+
+        initrdFlashSerialEnumerateTimeoutSeconds = mkOption {
+          type = types.ints.positive;
+          default = 240;
+          description = ''
+            Host-side timeout, in seconds, for the USB serial device of the
+            booted initrd to appear at `/dev/serial/by-id/...`. The default
+            of 240 seconds (4 minutes) matches historical behavior. Raise
+            this when device-side firmware-flash legitimately takes longer
+            than 4 minutes (for example, slow QSPI parts or extended
+            `postFlashInitrdCommands` work that prevents the gadget serial
+            from re-enumerating quickly).
+          '';
+        };
+
+        initrdFlashCompletionTimeoutSeconds = mkOption {
+          type = types.ints.positive;
+          default = 900;
+          description = ''
+            Host-side timeout, in seconds, used by the `expect` watcher to
+            wait for `Flashing platform firmware successful` (or the
+            unsuccessful counterpart) on the device's serial console. The
+            default of 900 seconds (15 minutes) matches historical behavior.
+          '';
+        };
       };
 
       flashScript = mkOption {
