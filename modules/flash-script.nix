@@ -422,7 +422,7 @@ in
         jetsonDevicePkgs = (lib.mapAttrs (_: lib.warn "system.build.jetsonDevicePkgs is deprecated, use pkgs.nvidia-jetpack") pkgs.nvidia-jetpack);
 
         # Left here for compatibility
-        inherit (pkgs.nvidia-jetpack) uefiCapsuleUpdate flashScript initrdFlashScript legacyFlashScript fuseScript signedFirmware;
+        inherit (pkgs.nvidia-jetpack) uefiCapsuleUpdate flashScript initrdFlashScript legacyFlashScript signedFlashScript fuseScript signedFirmware;
 
       }
       (lib.optionalAttrs cfg.firmware.fskp.enable { inherit (pkgs.nvidia-jetpack) fskpFuseScript; })
