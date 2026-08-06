@@ -47,6 +47,22 @@ $ nix build github:anduril/jetpack-nixos#flash-xavier-agx-devkit
 $ sudo ./result/bin/flash-xavier-agx-devkit
 ```
 
+#### Flashing with pre-signed boot artifacts
+
+Staging signed boot artifacts is handled by a separate wrapper around the legacy flash
+script, exposed as `config.system.build.signedFlashScript` (also available as
+`pkgs.nvidia-jetpack.signedFlashScript`). Build it and pass the signed sd-image output
+directory with `-s`:
+
+```shell
+$ nix build .#nixosConfigurations.orin-agx-devkit.config.system.build.signedFlashScript
+$ sudo ./result/bin/flash-signed-orin-agx-devkit -s /path/to/signed-image-dir
+```
+
+The directory must include `esp.offset`, `esp.size`, `root.offset`, and `root.size`, plus a compressed image either at `./*.img.zst` or `./sd-image/*.img.zst`.
+When `-s` is not provided, the script flashes the standard image bundled with the build output.
+Add `-u`/`--uki` when the signed image boots via a unified kernel image.
+
 At this point, your device should have a working UEFI firmware accessible either a monitor/keyboard, or via UART.
 
 ### Installation ISO
