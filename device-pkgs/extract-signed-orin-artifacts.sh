@@ -18,6 +18,7 @@ Manual override options:
   --source-dir DIR      Directory containing BOOTAA64.EFI, Image, etc. (shorthand for the two options above)
 
 Generic options:
+  --uki                 If sdimage contains UKI
   --output DIR          Destination directory for the staged artifacts (default: ./signed-artifacts)
   --manifest NAME       Manifest filename relative to the output directory (default: manifest.json)
   --force               Remove the output directory before staging
@@ -36,6 +37,8 @@ Examples:
 EOF
 }
 
+UKI=0
+UKI_SRC=""
 SD_IMAGE_DIR=""
 SOURCE_DIR=""
 BOOTAA64_SRC=""
@@ -109,25 +112,35 @@ stage_from_sd_image() {
 
 	local extracted_boot="$TEMP_STAGE_DIR/BOOTAA64.EFI"
 	local extracted_kernel="$TEMP_STAGE_DIR/Image"
+	local extracted_uki="$TEMP_STAGE_DIR/nixos.efi"
 
 	mcopy -n -i "$esp_img" ::EFI/BOOT/BOOTAA64.EFI "$extracted_boot" >/dev/null 2>&1 ||
 		die "Failed to extract BOOTAA64.EFI from ESP image"
+	BOOTAA64_SRC="$extracted_boot"
 
-	if ! debugfs -R "cat /boot/Image" "$root_img" >"$extracted_kernel" 2>/dev/null || [[ ! -s $extracted_kernel ]]; then
-		rm -f "$extracted_kernel"
+    if [[ $UKI -eq 1 ]]; then
+        mcopy -n -i "$esp_img" ::EFI/Linux/nixos.efi "$extracted_uki" >/dev/null 2>&1 ||
+            die "Failed to extract UKI (nixos.efi) from ESP image"
+        UKI_SRC="$extracted_uki"
+    else
+	    if ! debugfs -R "cat /boot/Image" "$root_img" >"$extracted_kernel" 2>/dev/null || [[ ! -s $extracted_kernel ]]; then
+		    rm -f "$extracted_kernel"
 
-		local esp_kernel_dir="$TEMP_STAGE_DIR/esp-kernel"
-		mkdir -p "$esp_kernel_dir"
-		mcopy -n -i "$esp_img" ::EFI/nixos/*-Image.efi "$esp_kernel_dir/" >/dev/null 2>&1 || true
+		    local esp_kernel_dir="$TEMP_STAGE_DIR/esp-kernel"
+		    mkdir -p "$esp_kernel_dir"
+		    mcopy -n -i "$esp_img" ::EFI/nixos/*-Image.efi "$esp_kernel_dir/" >/dev/null 2>&1 || true
 
-		local esp_kernel
-		esp_kernel=$(find "$esp_kernel_dir" -maxdepth 1 -name '*-Image.efi' -print -quit)
-		if [[ -n $esp_kernel && -s $esp_kernel ]]; then
-			cp "$esp_kernel" "$extracted_kernel"
-		else
-			die "Failed to extract kernel Image from either /boot/Image or EFI/nixos/*-Image.efi"
-		fi
-	fi
+		    local esp_kernel
+		    esp_kernel=$(find "$esp_kernel_dir" -maxdepth 1 -name '*-Image.efi' -print -quit)
+		    if [[ -n $esp_kernel && -s $esp_kernel ]]; then
+			    cp "$esp_kernel" "$extracted_kernel"
+		    else
+			    die "Failed to extract kernel Image from either /boot/Image or EFI/nixos/*-Image.efi"
+		    fi
+	    fi
+
+	    KERNEL_SRC="$extracted_kernel"
+    fi
 
 	local candidate_initrd="$TEMP_STAGE_DIR/initrd"
 	if debugfs -R "stat /boot/initrd" "$root_img" >/dev/null 2>&1; then
@@ -146,9 +159,6 @@ stage_from_sd_image() {
 			DTB_SRC="$candidate_dtb_dir"
 		fi
 	fi
-
-	BOOTAA64_SRC="$extracted_boot"
-	KERNEL_SRC="$extracted_kernel"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -191,6 +201,10 @@ while [[ $# -gt 0 ]]; do
 		FORCE=1
 		shift
 		;;
+    --uki)
+		UKI=1
+		shift
+		;;
 	-h | --help)
 		show_help
 		exit 0
@@ -218,18 +232,18 @@ if [[ -n $SOURCE_DIR ]]; then
 	fi
 fi
 
-if [[ -z $BOOTAA64_SRC || -z $KERNEL_SRC ]]; then
-	echo "Either --sd-image-dir or both --bootaa64/--kernel must be provided." >&2
-	show_help
-	exit 1
+if [[ $UKI -eq 1 ]]; then
+    if [[ ! -f $UKI_SRC  ]]; then
+        die "Required artifact not found: $UKI_SRC"
+    fi
+else
+    for required in BOOTAA64_SRC KERNEL_SRC; do
+	    path="${!required}"
+	    if [[ ! -f $path ]]; then
+		    die "Required artifact not found: $path"
+	    fi
+    done
 fi
-
-for required in BOOTAA64_SRC KERNEL_SRC; do
-	path="${!required}"
-	if [[ ! -f $path ]]; then
-		die "Required artifact not found: $path"
-	fi
-done
 
 if [[ -d $OUTPUT_DIR ]]; then
 	if [[ $FORCE -eq 1 ]]; then
@@ -266,6 +280,7 @@ stage_artifact "BOOTAA64.EFI" "$BOOTAA64_SRC"
 stage_artifact "Image" "$KERNEL_SRC"
 stage_artifact "initrd" "$INITRD_SRC"
 stage_artifact "dtb" "$DTB_SRC"
+stage_artifact "nixos.efi" "$UKI_SRC"
 
 manifest_path="$OUTPUT_DIR/$MANIFEST_NAME"
 {

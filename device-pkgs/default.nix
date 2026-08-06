@@ -172,6 +172,7 @@ let
         -s, --signed-sd-image DIR   Path to signed sd-image result directory.
                                     When provided, signed boot artifacts are automatically
                                     extracted before flashing.
+        -u, --uki                   If UKI is used
         -h, --help                  Show this help and exit.
 
       All other arguments are forwarded to NVIDIA's flashing script verbatim.
@@ -179,6 +180,7 @@ let
       }
 
       signed_sd_image=""
+      uki_arg=""
 
       while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -194,6 +196,10 @@ let
               exit 1
             fi
             shift 2
+            ;;
+          -u|--uki)
+            uki_arg="--uki"
+            shift
             ;;
           -h|--help)
             usage
@@ -233,6 +239,7 @@ let
         ${extractSignedOrinArtifacts}/bin/extract-signed-orin-artifacts \
           --sd-image-dir "$signed_sd_image" \
           --output "$temp_signed_dir" \
+          $uki_arg \
           --force >/dev/null
         echo "Signed artifacts staged under $temp_signed_dir" >&2
 
