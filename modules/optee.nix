@@ -28,6 +28,14 @@ let
   fsParentPathArgs = lib.optional (cfg.supplicant.fsParentPath != null)
     "--fs-parent-path=${cfg.supplicant.fsParentPath}";
 
+  # Binaries used directly in the ftpm-device-provision script.
+  tpm2_nvreadpublic = lib.getExe' pkgs.tpm2-tools "tpm2_nvreadpublic";
+  tpm2_clear = lib.getExe' pkgs.tpm2-tools "tpm2_clear";
+  tpm2_changeauth = lib.getExe' pkgs.tpm2-tools "tpm2_changeauth";
+  tpm2_nvdefine = lib.getExe' pkgs.tpm2-tools "tpm2_nvdefine";
+  nvftpm-helper-app = lib.getExe' pkgs.nvidia-jetpack.ftpmHelperTa "nvftpm-helper-app";
+  ftpm-device-provision-bin = lib.getExe' pkgs.nvidia-jetpack.ftpmDeviceProvisioning "ftpm-device-provision";
+
   supplicantArgs = lib.escapeShellArgs (
     [
       "--ta-path=${teeApplications}"
@@ -430,13 +438,6 @@ in
             RemainAfterExit = true;
           };
           environment.TPM2TOOLS_TCTI = "device:/dev/tpmrm0";
-          path = [
-            pkgs.tpm2-tools
-            pkgs.openssl
-            pkgs.diffutils
-            pkgs.nvidia-jetpack.ftpmHelperTa
-            pkgs.nvidia-jetpack.ftpmDeviceProvisioning
-          ];
           script = ''
             set -euo pipefail
 
@@ -444,7 +445,7 @@ in
             PROVISIONED_HANDLE="0x01800100"
             OWNER_PW="owner"
 
-            if tpm2_nvreadpublic "$PROVISIONED_HANDLE" &>/dev/null; then
+            if ${tpm2_nvreadpublic} "$PROVISIONED_HANDLE" &>/dev/null; then
               echo "[ftpm-provision] Already provisioned. Skipping."
               exit 0
             fi
@@ -470,7 +471,7 @@ in
 
             on_failure() {
               echo "[ftpm-provision] FAILED — clearing TPM so the next boot retries cleanly" >&2
-              tpm2_clear || \
+              ${tpm2_clear} || \
                 echo "[ftpm-provision] WARNING: tpm2_clear failed; TPM may need manual recovery" >&2
             }
             trap on_failure ERR
@@ -478,14 +479,14 @@ in
             RSA_CERT="$WORKDIR/rsa_ek_cert.der"
             EC_CERT="$WORKDIR/ec_ek_cert.der"
 
-            nvftpm-helper-app -a "$RSA_CERT" -b "$EC_CERT"
-            ftpm-device-provision -r "$RSA_CERT" -e "$EC_CERT" -p "$OWNER_PW"
+            ${nvftpm-helper-app} -a "$RSA_CERT" -b "$EC_CERT"
+            ${ftpm-device-provision-bin} -r "$RSA_CERT" -e "$EC_CERT" -p "$OWNER_PW"
 
             # systemd's TPM2 SRK setup and tpm2-tools expect no auth set.
-            tpm2_changeauth -c o -p "$OWNER_PW"
-            tpm2_changeauth -c e -p "$OWNER_PW"
+            ${tpm2_changeauth} -c o -p "$OWNER_PW"
+            ${tpm2_changeauth} -c e -p "$OWNER_PW"
 
-            tpm2_nvdefine "$PROVISIONED_HANDLE" -C o -s 1 -a "ownerread|ownerwrite"
+            ${tpm2_nvdefine} "$PROVISIONED_HANDLE" -C o -s 1 -a "ownerread|ownerwrite"
 
             echo "[ftpm-provision] Done."
           '';
