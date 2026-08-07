@@ -1,7 +1,6 @@
 { lib
-, runCommand
-, writeShellScript
-, runtimeShell
+, stdenvNoCC
+, makeWrapper
 , python3
 , openssl
 , coreutils
@@ -31,70 +30,108 @@ let
     openssl
     coreutils
   ];
-
-  # Output directories the tools may produce.
-  outputDirs = "odm_out oem_out ftpm_out ca_out ftpm_kdk";
-
-  # NVIDIA's tools chdir to their own directory and write output alongside
-  # themselves, so we symlink sources into a per-invocation tmpdir. The .sh
-  # tools need an explicit interpreter since #!/bin/bash doesn't resolve on NixOS.
-  mkWrapper =
-    name: cmd:
-    writeShellScript name ''
-      set -euo pipefail
-      _ORIG_DIR="$(pwd)"
-      _WORKSPACE="$(mktemp -d)"
-      _cleanup() { rm -rf "$_WORKSPACE"; }
-      trap _cleanup EXIT
-
-      export PATH="${runtimePath}:$PATH"
-
-      # Refuse to clobber an earlier run's output (EKB/KDK material isn't reproducible).
-      for _outdir in ${outputDirs}; do
-        if [ -e "$_ORIG_DIR/$_outdir" ]; then
-          echo "error: $_ORIG_DIR/$_outdir already exists; move or remove it first" >&2
-          exit 1
-        fi
-      done
-
-      for _f in ${toolSrc}/*; do
-        ln -sf "$_f" "$_WORKSPACE/$(basename "$_f")"
-      done
-      ln -sf ${genEkbSrc} "$_WORKSPACE/gen_ekb.py"
-
-      ${cmd}
-
-      for _outdir in ${outputDirs}; do
-        if [ -d "$_WORKSPACE/$_outdir" ]; then
-          mv "$_WORKSPACE/$_outdir" "$_ORIG_DIR/$_outdir"
-        fi
-      done
-    '';
-
-  wrappers = {
-    ftpm-odm-ekb-gen = mkWrapper "ftpm-odm-ekb-gen"
-      ''${pythonEnv}/bin/python3 "$_WORKSPACE/odm_ekb_gen.py" "$@"'';
-    ftpm-oem-ekb-gen = mkWrapper "ftpm-oem-ekb-gen"
-      ''${pythonEnv}/bin/python3 "$_WORKSPACE/oem_ekb_gen.py" "$@"'';
-    ftpm-kdk-gen = mkWrapper "ftpm-kdk-gen"
-      ''${pythonEnv}/bin/python3 "$_WORKSPACE/kdk_gen.py" "$@"'';
-    ftpm-gen-ek-csr = mkWrapper "ftpm-gen-ek-csr"
-      ''${runtimeShell} "$_WORKSPACE/ftpm_manufacturer_gen_ek_csr.sh" "$@"'';
-    ftpm-ca-simulator = mkWrapper "ftpm-ca-simulator"
-      ''${runtimeShell} "$_WORKSPACE/ftpm_manufacturer_ca_simulator.sh" "$@"'';
-    gen-ekb = mkWrapper "gen-ekb"
-      ''${pythonEnv}/bin/python3 "$_WORKSPACE/gen_ekb.py" "$@"'';
-  };
 in
-runCommand "ftpm-manufacturing-tools-${l4tMajorMinorPatchVersion}"
-{
+stdenvNoCC.mkDerivation {
+  pname = "ftpm-manufacturing-tools";
+  version = l4tMajorMinorPatchVersion;
+
+  dontUnpack = true;
+  nativeBuildInputs = [ makeWrapper ];
+
+  # NVIDIA's tools assume they're run from their own source directory:
+  # odm_ekb_gen.py/oem_ekb_gen.py chdir to their own location before doing
+  # relative-path I/O, and the shell tools reference sibling scripts/config
+  # by relative path. Since we copy everything into $out/libexec (a
+  # read-only store path), drop the chdir calls and make those references
+  # absolute, so the tools instead read/write relative to the caller's cwd.
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/libexec/ftpm $out/bin
+    cp -r ${toolSrc}/. $out/libexec/ftpm/
+    cp ${genEkbSrc} $out/libexec/ftpm/gen_ekb.py
+    chmod -R u+w $out/libexec/ftpm
+
+    substituteInPlace $out/libexec/ftpm/odm_ekb_gen.py \
+      --replace-fail \
+        'os.path.dirname(os.path.abspath(__file__))' \
+        'os.getcwd()' \
+      --replace-fail \
+        'os.chdir(wd)' \
+        'pass' \
+      --replace-warn \
+        'cmd_gen_ek_csr = "./ftpm_manufacturer_gen_ek_csr.sh"' \
+        'cmd_gen_ek_csr = "'"$out"'/libexec/ftpm/ftpm_manufacturer_gen_ek_csr.sh"' \
+      --replace-warn \
+        'cmd_gen_ek_certs = "./ftpm_manufacturer_ca_simulator.sh"' \
+        'cmd_gen_ek_certs = "'"$out"'/libexec/ftpm/ftpm_manufacturer_ca_simulator.sh"' \
+      --replace-warn \
+        'cmd_sign_sid_csr = "./ftpm_manufacturer_ca_sign_sid_csr.sh"' \
+        'cmd_sign_sid_csr = "'"$out"'/libexec/ftpm/ftpm_manufacturer_ca_sign_sid_csr.sh"'
+    substituteInPlace $out/libexec/ftpm/oem_ekb_gen.py \
+      --replace-fail \
+        'os.path.dirname(os.path.abspath(__file__))' \
+        'os.getcwd()' \
+      --replace-fail \
+        'os.chdir(wd)' \
+        'pass' \
+      --replace-fail \
+        'cmd_gen_ekb = "./gen_ekb.py"' \
+        'cmd_gen_ekb = "'"$out"'/libexec/ftpm/gen_ekb.py"'
+
+    if [ -f "$out/libexec/ftpm/ftpm_manufacturer_gen_ek_csr.sh" ]; then
+      substituteInPlace $out/libexec/ftpm/ftpm_manufacturer_gen_ek_csr.sh \
+        --replace-fail \
+          'FTPM_GEN_EK_CSR_PYTHON_SCRIPT="./ftpm_manufacturer_gen_ek_csr_tool.py"' \
+          'FTPM_GEN_EK_CSR_PYTHON_SCRIPT="'"$out"'/libexec/ftpm/ftpm_manufacturer_gen_ek_csr_tool.py"'
+    fi
+    if [ -f "$out/libexec/ftpm/ftpm_manufacturer_ca_simulator.sh" ]; then
+      substituteInPlace $out/libexec/ftpm/ftpm_manufacturer_ca_simulator.sh \
+        --replace-fail \
+          'CONF_PATH="./conf"' \
+          'CONF_PATH="'"$out"'/libexec/ftpm/conf"' \
+        --replace-fail \
+          'CA_SIM_PYTHON_SCRIPT="./ftpm_manufacturer_ca_simulator.py"' \
+          'CA_SIM_PYTHON_SCRIPT="'"$out"'/libexec/ftpm/ftpm_manufacturer_ca_simulator.py"'
+    fi
+    if [ -f "$out/libexec/ftpm/ftpm_manufacturer_ca_sign_sid_csr.sh" ]; then
+      substituteInPlace $out/libexec/ftpm/ftpm_manufacturer_ca_sign_sid_csr.sh \
+        --replace-fail \
+          'CONF_PATH="./conf"' \
+          'CONF_PATH="'"$out"'/libexec/ftpm/conf"' \
+        --replace-fail \
+          'CA_SIM_PYTHON_SCRIPT="./ftpm_manufacturer_ca_sign_sid_csr.py"' \
+          'CA_SIM_PYTHON_SCRIPT="'"$out"'/libexec/ftpm/ftpm_manufacturer_ca_sign_sid_csr.py"'
+    fi
+
+    patchShebangs $out/libexec/ftpm
+
+    makeWrapper ${pythonEnv}/bin/python3 $out/bin/ftpm-odm-ekb-gen \
+      --add-flags $out/libexec/ftpm/odm_ekb_gen.py \
+      --prefix PATH : ${runtimePath}
+    makeWrapper ${pythonEnv}/bin/python3 $out/bin/ftpm-oem-ekb-gen \
+      --add-flags $out/libexec/ftpm/oem_ekb_gen.py \
+      --prefix PATH : ${runtimePath}
+    makeWrapper ${pythonEnv}/bin/python3 $out/bin/ftpm-kdk-gen \
+      --add-flags $out/libexec/ftpm/kdk_gen.py \
+      --prefix PATH : ${runtimePath}
+    makeWrapper ${pythonEnv}/bin/python3 $out/bin/gen-ekb \
+      --add-flags $out/libexec/ftpm/gen_ekb.py \
+      --prefix PATH : ${runtimePath}
+    if [ -f "$out/libexec/ftpm/ftpm_manufacturer_gen_ek_csr.sh" ]; then
+      makeWrapper $out/libexec/ftpm/ftpm_manufacturer_gen_ek_csr.sh $out/bin/ftpm-gen-ek-csr \
+        --prefix PATH : ${runtimePath}
+    fi
+    if [ -f "$out/libexec/ftpm/ftpm_manufacturer_ca_simulator.sh" ]; then
+      makeWrapper $out/libexec/ftpm/ftpm_manufacturer_ca_simulator.sh $out/bin/ftpm-ca-simulator \
+        --prefix PATH : ${runtimePath}
+    fi
+
+    runHook postInstall
+  '';
+
   meta = {
     description = "NVIDIA fTPM ODM/OEM manufacturing tools (KDK and EKB generation, EK CSR generation, CA simulator)";
     platforms = lib.platforms.linux;
   };
-} ''
-  mkdir -p $out/bin
-  ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: script: ''
-    install -m755 ${script} $out/bin/${name}
-  '') wrappers)}
-''
+}

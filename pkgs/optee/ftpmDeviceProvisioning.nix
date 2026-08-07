@@ -1,38 +1,38 @@
-{ lib
-, runCommand
-, writeShellScript
+{ stdenvNoCC
+, makeWrapper
 , runtimeShell
 , gitRepos
 , l4tMajorMinorPatchVersion
 }:
 let
   toolSrc = "${gitRepos."tegra/optee-src/nv-optee"}/optee/samples/ftpm-helper/host/tool";
-
-  # #!/bin/bash shebang does not resolve on NixOS, so run through runtimeShell.
-  mkWrapper =
-    name: script:
-    writeShellScript name ''
-      exec ${runtimeShell} ${toolSrc}/${script} "$@"
-    '';
-
-  wrappers = {
-    ftpm-device-provision = mkWrapper "ftpm-device-provision" "ftpm_device_provision.sh";
-    ftpm-offline-verify = mkWrapper "ftpm-offline-verify" "ftpm_offline_provisioning_verify.sh";
-    ftpm-test-attestation = mkWrapper "ftpm-test-attestation" "ftpm_test_local_attestation.sh";
-  };
 in
-runCommand "ftpm-device-provisioning-${l4tMajorMinorPatchVersion}"
-{
+stdenvNoCC.mkDerivation {
+  pname = "ftpm-device-provisioning";
+  version = l4tMajorMinorPatchVersion;
+
+  dontUnpack = true;
+  nativeBuildInputs = [ makeWrapper ];
+
+  # #!/bin/bash does not resolve on NixOS, so run each script through
+  # runtimeShell rather than relying on its own shebang.
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/bin
+
+    makeWrapper ${runtimeShell} $out/bin/ftpm-device-provision \
+      --add-flags ${toolSrc}/ftpm_device_provision.sh
+    makeWrapper ${runtimeShell} $out/bin/ftpm-offline-verify \
+      --add-flags ${toolSrc}/ftpm_offline_provisioning_verify.sh
+    makeWrapper ${runtimeShell} $out/bin/ftpm-test-attestation \
+      --add-flags ${toolSrc}/ftpm_test_local_attestation.sh
+
+    runHook postInstall
+  '';
+
   meta = {
     description = "NVIDIA fTPM on-device provisioning and verification scripts";
     platforms = [ "aarch64-linux" ];
   };
 }
-  ''
-    mkdir -p $out/bin
-    ${lib.concatStringsSep "\n" (
-      lib.mapAttrsToList (name: script: ''
-        install -m755 ${script} $out/bin/${name}
-      '') wrappers
-    )}
-  ''
