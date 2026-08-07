@@ -371,13 +371,6 @@ in
         # tpm_ftpm_tee must load after tee-supplicant is up.
         boot.blacklistedKernelModules = [ "tpm_ftpm_tee" ];
 
-        # r38.4's ms-tpm-20-ref update made RSA keygen constant-time, so it now
-        # takes ~12s (measured on tpm2_createek) with the CPU stuck in secure
-        # world -- past the 10s hard lockup default. Set via kernelParams (not
-        # boot.kernel.sysctl) since keygen also happens outside provisioning
-        # (tpm2_createak, systemd-cryptenroll) and needs to hold from boot.
-        boot.kernelParams = lib.optional (l4tAtLeast "38.4") "watchdog_thresh=30";
-
         boot.kernelPatches = [{
           name = "fTPM_tee";
           patch = null;
@@ -459,7 +452,21 @@ in
             echo "[ftpm-provision] First boot — running fTPM provisioning..."
 
             WORKDIR=$(mktemp -d)
-            trap 'rm -rf "$WORKDIR"' EXIT
+
+            # r38.4's ms-tpm-20-ref update made RSA keygen constant-time, so
+            # tpm2_createek (invoked by ftpm-device-provision below) now takes
+            # ~12s with the CPU stuck in secure world -- past the 10s hard
+            # lockup default. Raise the threshold for the duration of this
+            # service and restore it on exit, rather than system-wide.
+            WATCHDOG_THRESH_FILE="/proc/sys/kernel/watchdog_thresh"
+            ORIG_WATCHDOG_THRESH="$(cat "$WATCHDOG_THRESH_FILE")"
+            echo 30 > "$WATCHDOG_THRESH_FILE"
+
+            cleanup() {
+              echo "$ORIG_WATCHDOG_THRESH" > "$WATCHDOG_THRESH_FILE"
+              rm -rf "$WORKDIR"
+            }
+            trap cleanup EXIT
 
             on_failure() {
               echo "[ftpm-provision] FAILED — clearing TPM so the next boot retries cleanly" >&2
