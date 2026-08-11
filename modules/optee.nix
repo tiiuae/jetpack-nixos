@@ -188,6 +188,18 @@ in
             '';
           };
         };
+
+        autoProvision = mkOption {
+          type = types.bool;
+          default = cfgFw.eksFile != null;
+          description = ''
+            Automatically provision fTPM EK certificates from the EKB
+            (hardware.nvidia-jetpack.firmware.eksFile) into TPM NV memory
+            on first boot. Defaults to true whenever eksFile is set, since
+            without it there's nothing to provision from. Enabling this
+            without eksFile set is a configuration error.
+          '';
+        };
       };
 
       patches = mkOption {
@@ -255,6 +267,13 @@ in
           message = ''
             supplicant.earlyBoot requires ftpm.enable (the initrd
             services are only useful for fTPM-based LUKS unlock).
+          '';
+        }
+        {
+          assertion = !cfg.ftpm.autoProvision || cfgFw.eksFile != null;
+          message = ''
+            hardware.nvidia-jetpack.firmware.optee.ftpm.autoProvision
+            requires hardware.nvidia-jetpack.firmware.eksFile to be set.
           '';
         }
         {
@@ -417,7 +436,7 @@ in
         };
 
         # Provision fTPM EK certs from EKB into NV memory on first boot (fused devices only).
-        systemd.services.ftpm-device-provision = lib.mkIf (cfgFw.eksFile != null) {
+        systemd.services.ftpm-device-provision = lib.mkIf cfg.ftpm.autoProvision {
           description = "Provision fTPM EK certificates from EKB";
           after = [ "ftpm-driver.service" ];
           requires = [ "ftpm-driver.service" ];
