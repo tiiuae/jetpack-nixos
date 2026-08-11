@@ -1,11 +1,11 @@
 { writeShellApplication
 , tpm2-tools
 , ftpmHelperTa
-, ftpmDeviceProvisioning
+, ftpmDeviceProvisioningTools
 }:
 writeShellApplication {
   name = "ftpm-auto-provision";
-  runtimeInputs = [ tpm2-tools ftpmHelperTa ftpmDeviceProvisioning ];
+  runtimeInputs = [ tpm2-tools ftpmHelperTa ftpmDeviceProvisioningTools ];
   text = ''
     # Commit marker; NVIDIA's cert handles are written midway so can't serve this role.
     PROVISIONED_HANDLE="0x01800100"

@@ -14,7 +14,7 @@ let
   runtimePath = lib.makeBinPath [ tpm2-tools openssl diffutils ftpmHelperTa ];
 in
 stdenvNoCC.mkDerivation {
-  pname = "ftpm-device-provisioning";
+  pname = "ftpm-device-provisioning-tools";
   version = l4tMajorMinorPatchVersion;
 
   dontUnpack = true;
