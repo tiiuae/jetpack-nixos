@@ -131,20 +131,6 @@
     "/usr/lib/aarch64-linux-gnu/libnvcudla.so",
     "/usr/lib/aarch64-linux-gnu/libnvcuextend.so"
   ],
-  "nvidia-l4t-cuda-nvgpu": [
-    "/opt/nvidia/l4t-gpu-libs/nvgpu/libcuda.so.1.1",
-    "/opt/nvidia/l4t-gpu-libs/nvgpu/libcuda_instrumentation.so",
-    "/opt/nvidia/l4t-gpu-libs/nvgpu/libcuda.so",
-    "/opt/nvidia/l4t-gpu-libs/nvgpu/libcuda.so.1",
-    "/opt/nvidia/l4t-gpu-libs/nvgpu/libcuda_instrumentation.so.1"
-  ],
-  "nvidia-l4t-cuda-openrm": [
-    "/opt/nvidia/l4t-gpu-libs/openrm/libcuda.so.1.1",
-    "/opt/nvidia/l4t-gpu-libs/openrm/libcuda_instrumentation.so",
-    "/opt/nvidia/l4t-gpu-libs/openrm/libcuda.so",
-    "/opt/nvidia/l4t-gpu-libs/openrm/libcuda.so.1",
-    "/opt/nvidia/l4t-gpu-libs/openrm/libcuda_instrumentation.so.1"
-  ],
   "nvidia-l4t-cuda-utils": [
     "/usr/bin/nvidia-cuda-mps-control",
     "/usr/bin/nvidia-cuda-mps-server"
@@ -298,10 +284,8 @@
     "/usr/lib/aarch64-linux-gnu/nvidia/libnvpvaumd_cuda.so"
   ],
   "nvidia-l4t-video-codec-openrm": [
-    "/usr/lib/aarch64-linux-gnu/nvidia/libnvcuvid.so",
     "/usr/lib/aarch64-linux-gnu/nvidia/libnvidia-encode.so",
     "/usr/lib/aarch64-linux-gnu/nvidia/libnvidia-opticalflow.so",
-    "/usr/lib/aarch64-linux-gnu/nvidia/libnvcuvid.so.1",
     "/usr/lib/aarch64-linux-gnu/nvidia/libnvidia-encode.so.1",
     "/usr/lib/aarch64-linux-gnu/nvidia/libnvidia-opticalflow.so.1"
   ],
