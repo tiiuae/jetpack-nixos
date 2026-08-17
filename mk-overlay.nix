@@ -38,6 +38,10 @@ let
     inherit l4tMajorMinorPatchVersion;
     inherit (final) lib fetchurl fetchgit;
   };
+
+  releaseDirectory = if l4tMajorMinorPatchVersion == "36.5.2" then "releases" else "release";
+  bspUrl =
+    "https://developer.download.nvidia.com/embedded/L4T/r${versions.major l4tMajorMinorPatchVersion}_Release_v${versions.minor l4tMajorMinorPatchVersion}.${versions.patch l4tMajorMinorPatchVersion}/${releaseDirectory}/Jetson_Linux_R${l4tMajorMinorPatchVersion}_aarch64.tbz2";
 in
 makeScope final.newScope (self: {
   inherit (sourceInfo) debs gitRepos;
@@ -62,7 +66,7 @@ makeScope final.newScope (self: {
         # https://developer.nvidia.com/embedded/jetson-linux-archive
         # https://repo.download.nvidia.com/jetson/
         src = final.fetchurl {
-          url = "https://developer.download.nvidia.com/embedded/L4T/r${versions.major l4tMajorMinorPatchVersion}_Release_v${versions.minor l4tMajorMinorPatchVersion}.${versions.patch l4tMajorMinorPatchVersion}/release/Jetson_Linux_R${l4tMajorMinorPatchVersion}_aarch64.tbz2";
+          url = bspUrl;
           hash = bspHash;
         };
         nativeBuildInputs = [ final.buildPackages.bzip2 ];
