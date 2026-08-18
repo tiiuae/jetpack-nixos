@@ -66,6 +66,15 @@ in
             default = [ ];
           };
 
+          edk2ExtraPackages = mkOption {
+            type = types.listOf types.package;
+            description = ''
+              Extra edk2 package trees for the UEFI build. Each derivation is
+              unpacked under its name and prepended to PACKAGES_PATH. Requires L4T r36 or newer.
+            '';
+            default = [ ];
+          };
+
           secureBoot = {
             enrollDefaultKeys = lib.mkEnableOption "enroll default UEFI keys";
             defaultPkEslFile = mkOption {
@@ -462,6 +471,10 @@ in
       {
         assertion = (cfg.firmware.fskp.enable && (cfg.firmware.fskp.fuseBlob ? insecureClearText) -> cfg.firmware.fskp.fuseBlob.insecureClearText);
         message = "Do not set fskp.fuseBlob.insecureClearText in order to use an encrypted blob";
+      }
+      {
+        assertion = cfg.firmware.uefi.edk2ExtraPackages != [ ] -> pkgs.nvidia-jetpack.l4tAtLeast "36";
+        message = "hardware.nvidia-jetpack.firmware.uefi.edk2ExtraPackages requires L4T r36 or newer; the r35 UEFI firmware builder does not accept extra package trees.";
       }
     ];
 
