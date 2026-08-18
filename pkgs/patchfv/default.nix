@@ -28,6 +28,10 @@ let
 
     pythonImportsCheck = [ "uefi_firmware" ];
 
+    # The v1.14 tag still declares `name = "uefi_firmware"` and a stale
+    # `__version__ = "1.11"`, so the dist-info never matches pname/version.
+    dontCheckPythonMetadata = true;
+
     meta = {
       description = "Tool for parsing, extracting, and recreating UEFI firmware volumes";
       homepage = "https://github.com/theopolis/uefi-firmware-parser";
