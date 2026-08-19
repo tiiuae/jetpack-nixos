@@ -202,7 +202,7 @@ let
             ];
 
             postFixup =
-              prevAttrs.prevAttrs or ""
+              prevAttrs.postFixup or ""
               + ''
                 nixLog "patchelf-ing ''${!outputLib:?}/lib/libnvinfer.so with runtime dependencies"
                 patchelf \
