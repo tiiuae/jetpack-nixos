@@ -47,10 +47,29 @@ in
   # of TensorRT don't fail (e.g., multimedia-samples). We only need to do this on Jetson devices with a DLA, so it is
   # sufficient to guard on the availability of libcudla, which is only available on Xavier and Orin.
   tensorrt =
+    let
+      tensorrt =
+        if finalCudaPackages.cudaAtLeast "13" then
+          prevCudaPackages.tensorrt
+        else
+          prevCudaPackages.tensorrt.overrideAttrs
+            (prevAttrs: {
+              postFixup =
+                prevAttrs.postFixup or ""
+                + ''
+                  for f in "''${!outputLib:?}"/lib/*.so* ; do
+                    if [ -f "$f" ] ; then
+                      nixLog "clearing execstack of $f"
+                      ${lib.getExe finalCudaPackages.pkgs.buildPackages.patchelfUnstable} --clear-execstack "$f"
+                    fi
+                  done
+                '';
+            });
+    in
     if !finalCudaPackages.libcudla.meta.available then
-      prevCudaPackages.tensorrt
+      tensorrt
     else
-      prevCudaPackages.tensorrt.overrideAttrs (prevAttrs: {
+      tensorrt.overrideAttrs (prevAttrs: {
         buildInputs =
           prevAttrs.buildInputs or [ ]
           ++ (
