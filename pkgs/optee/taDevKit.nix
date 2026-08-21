@@ -1,9 +1,7 @@
-{ optee-os }:
-# `taDevKit` builds from `optee-os` rather than `new-optee-os` so it
-# doesn't depend on the fTPM TA derivations (which themselves depend on
-# `taDevKit`) — depending on `new-optee-os` would recreate the
-# optee-os → fTPM TA → taDevKit → new-optee-os cycle.
-optee-os.overrideAttrs (prevAttrs: {
+{ optee-config }:
+# Builds from optee-config rather than optee-os to avoid an
+# optee-os -> fTPM TA -> taDevKit -> optee-os cycle.
+optee-config.overrideAttrs (prevAttrs: {
   pname = "optee-ta-dev-kit";
   makeFlags = prevAttrs.makeFlags or [ ] ++ [ "ta_dev_kit" ];
 })

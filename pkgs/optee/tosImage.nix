@@ -6,7 +6,7 @@
 , lib
 , nukeReferences
 , nvLuksSrv
-, new-optee-os
+, optee-os
 , opteeDtb
 }:
 let
@@ -15,7 +15,7 @@ in
 lib.makeOverridable
   ({ earlyTaPaths }:
   let
-    opteeOS = new-optee-os.overrideAttrs (finalAttrs: {
+    opteeOS = optee-os.overrideAttrs (finalAttrs: {
       earlyTaPaths = finalAttrs.earlyTaPaths or [ ] ++ earlyTaPaths;
     });
 
