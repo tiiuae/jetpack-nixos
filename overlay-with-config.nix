@@ -109,7 +109,11 @@ final: prev: (
           ++ lib.optional cfg.firmware.optee.ftpm.measuredBoot "CFG_TA_MEASURED_BOOT=y";
       });
 
-      new-optee-os = prevJetpack.new-optee-os.overrideAttrs (prevAttrs: {
+      # `optee-os` carries the general OP-TEE build config shared by the
+      # final image and `taDevKit`. TA derivations stay on
+      # `new-optee-os` only — referencing them here would recreate the
+      # optee-os → fTPM TA → taDevKit → optee-os cycle.
+      optee-os = prevJetpack.optee-os.overrideAttrs (prevAttrs: {
         inherit (finalJetpack) socType;
         inherit (cfg.firmware.optee) taPublicKeyFile coreLogLevel taLogLevel;
         patches = prevAttrs.patches or [ ] ++ cfg.firmware.optee.patches;
@@ -117,6 +121,9 @@ final: prev: (
         enableFTPM = cfg.firmware.optee.ftpm.enable;
         measuredBoot = cfg.firmware.optee.ftpm.measuredBoot;
         unsecureInjectEPS = cfg.firmware.optee.ftpm.unsecureInjectEPS.enable;
+      });
+
+      new-optee-os = prevJetpack.new-optee-os.overrideAttrs (_: {
         ftpmHelperTa =
           if cfg.firmware.optee.ftpm.enable
           then finalJetpack.ftpmHelperTa else null;

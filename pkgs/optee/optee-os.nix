@@ -17,6 +17,11 @@ let
   l4tMajorVersion = lib.versions.major l4tMajorMinorPatchVersion;
 in
 {
+  # `optee-os` is the shared build config for both the final OP-TEE
+  # image and `taDevKit`. TA derivations (ftpmHelperTa/msTpm20RefTa) and
+  # earlyTaPaths live on `new-optee-os` instead, since `taDevKit`
+  # depends on this file and referencing them here would recreate the
+  # optee-os → fTPM TA → taDevKit → optee-os cycle.
   pname = "optee-os";
   version = l4tMajorMinorPatchVersion;
 
@@ -30,26 +35,9 @@ in
   taLogLevel = finalAttrs.coreLogLevel;
   taPublicKeyFile = null;
 
-  # fTPM — set ftpmHelperTa/msTpm20RefTa to the TA derivations to embed them as early TAs
   enableFTPM = false;
   measuredBoot = false;
   unsecureInjectEPS = false;
-  ftpmHelperTa = null;
-  msTpm20RefTa = null;
-
-  # Stripped ELFs are used here rather than signed .ta files. Early TAs
-  # are embedded directly in the OP-TEE binary image and do not require
-  # signing — they inherit the same trust level as OP-TEE OS itself.
-  # Only REE (file-system-loaded) TAs need to be signed.
-  # See: https://optee.readthedocs.io/en/latest/building/trusted_applications.html#signing-of-tas
-  #
-  # Using enableFTPM (rather than ftpmHelperTa != null) ensures that if
-  # enableFTPM = true but the TA paths weren't provided, you get an
-  # immediate eval error instead of a silent disable of fTPM.
-  earlyTaPaths = lib.optionals finalAttrs.enableFTPM [
-    "${finalAttrs.ftpmHelperTa}/a6a3a74a-77cb-433a-990c-1dfb8a3fbc4c.stripped.elf"
-    "${finalAttrs.msTpm20RefTa}/bc50d971-d4c9-42c4-82cb-343fb7f37896.stripped.elf"
-  ];
 
   src = gitRepos."tegra/optee-src/nv-optee";
   patches = [
@@ -72,13 +60,6 @@ in
 
   postPatch = ''
     patchShebangs $(find optee/optee_os -type d -name scripts -printf '%p ')
-  '';
-
-  # NOTE: EARLY_TA_PATHS needs to be added outside of `makeFlags` since it is a
-  # space separated list of paths. See
-  # https://nixos.org/manual/nixpkgs/stable/#build-phase for more details.
-  preBuild = lib.optionalString (finalAttrs.earlyTaPaths != [ ]) ''
-    makeFlagsArray+=(EARLY_TA_PATHS="${toString finalAttrs.earlyTaPaths}")
   '';
 
   makeFlags = [
