@@ -26,6 +26,9 @@
   # default, EDK2 authenticates using a test keypair commited upstream.
 , trustedPublicCertPemFile ? null
 , srcs
+, # Extra edk2 package trees, unpacked under their name and prepended to
+  # PACKAGES_PATH -- a derivation named "foo" needs foo/SomePkg/SomePkg.inf.
+  extraPackages ? [ ]
 , ...
 }:
 let
@@ -49,6 +52,18 @@ let
 
   pythonEnv = buildPackages.python312.withPackages (ps: callPackage ./pyenv.nix { inherit ps; inherit (patchedSrcs) edk2-nvidia; });
 
+  # No trailing slash -- GetSourcePackagesPath appends one. Leading space per
+  # flag keeps an empty list byte-identical to the old command line.
+  extraPackagesPathFlags =
+    lib.concatMapStrings (p: " --insert-packages-path ${p.name}") extraPackages;
+
+  # Multi-src unpackPhase fails deep in the sandbox (not with a clear Nix
+  # error) if two srcs share a name, so check upfront.
+  extraPackageNames = builtins.map (p: p.name) extraPackages;
+  collidingPackageNames = lib.intersectLists extraPackageNames (builtins.attrNames patchedSrcs);
+  uniqueExtraPackageNames = lib.unique extraPackageNames;
+  hasDuplicatePackageNames = builtins.length uniqueExtraPackageNames != builtins.length extraPackageNames;
+
   buildTarget = if debugMode then "DEBUG" else "RELEASE";
 
   targetArch =
@@ -67,6 +82,10 @@ let
     else
       throw "Unsupported architecture";
 in
+assert lib.assertMsg (collidingPackageNames == [ ])
+  "extraPackages names must not collide with the built-in edk2 package trees (${toString (builtins.attrNames patchedSrcs)}); colliding names: ${toString collidingPackageNames}";
+assert lib.assertMsg (!hasDuplicatePackageNames)
+  "extraPackages names must be unique; got: ${toString extraPackageNames}";
 lib.extendMkDerivation {
   constructDrv = stdenv.mkDerivation;
   excludeDrvArgNames = [ "platformBuild" "outputs" "stuartExtraArgs" ];
@@ -78,7 +97,7 @@ lib.extendMkDerivation {
       pname = "${platformBuild}-edk2-uefi-${buildTarget}";
       version = l4tMajorMinorPatchVersion;
 
-      srcs = builtins.attrValues patchedSrcs;
+      srcs = builtins.attrValues patchedSrcs ++ extraPackages;
 
       sourceRoot = ".";
 
@@ -167,7 +186,7 @@ lib.extendMkDerivation {
 
       buildPhase = ''
         stuart_setup -c "edk2-nvidia/Platform/NVIDIA/${platformBuild}/PlatformBuild.py"
-        stuart_build -c "edk2-nvidia/Platform/NVIDIA/${platformBuild}/PlatformBuild.py" ${stuartExtraArgs} --target ${buildTarget}
+        stuart_build -c "edk2-nvidia/Platform/NVIDIA/${platformBuild}/PlatformBuild.py" ${extraPackagesPathFlags} ${stuartExtraArgs} --target ${buildTarget}
       '';
 
       installPhase = ''
