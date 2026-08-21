@@ -109,7 +109,7 @@ final: prev: (
           ++ lib.optional cfg.firmware.optee.ftpm.measuredBoot "CFG_TA_MEASURED_BOOT=y";
       });
 
-      optee-os = prevJetpack.optee-os.overrideAttrs (prevAttrs: {
+      new-optee-os = prevJetpack.new-optee-os.overrideAttrs (prevAttrs: {
         inherit (finalJetpack) socType;
         inherit (cfg.firmware.optee) taPublicKeyFile coreLogLevel taLogLevel;
         patches = prevAttrs.patches or [ ] ++ cfg.firmware.optee.patches;
