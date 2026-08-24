@@ -153,6 +153,8 @@ makeScope final.newScope (self: {
       self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { kernelPatches = [ ]; };
   kernelPackages = final.linuxPackagesFor self.kernel;
 
+  orinVirtualizationSupport = self.callPackage ./pkgs/orin-virtualization-support { };
+
   rtkernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { kernelPatches = [ ]; realtime = true; };
   rtkernelPackages = final.linuxPackagesFor self.rtkernel;
 
