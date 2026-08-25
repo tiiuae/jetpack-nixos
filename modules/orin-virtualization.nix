@@ -13,6 +13,12 @@ let
   support = pkgs.nvidia-jetpack.orinVirtualizationSupport.override {
     bpmpAllowAllDomains = cfg.bpmpHost.allowAllDomains;
   };
+  mgbe0 = support.passthrough.mgbe0;
+  mgbe0DevicePath = "/sys/bus/platform/devices/${mgbe0.sysfsName}";
+  mgbe0Artifacts = support.mkMgbe0Overlay {
+    inherit pkgs support;
+    hostDtb = "${config.hardware.deviceTree.package}/${config.hardware.deviceTree.name}";
+  };
   bpmpHostOverlay = pkgs.writeText "bpmp-host-overlay.dts" ''
     /dts-v1/;
     /plugin/;
@@ -89,6 +95,8 @@ in
     };
 
     dceHost.enable = lib.mkEnableOption "the Orin DCE display host proxy";
+    mgbe0Host.enable = lib.mkEnableOption "host support for passing Orin MGBE0 through to a guest";
+    mgbe0Guest.enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
   };
 
   config = lib.mkMerge [
@@ -224,6 +232,89 @@ in
           }
         ];
       };
+    })
+
+    (lib.mkIf cfg.mgbe0Host.enable {
+      assertions = [
+        {
+          assertion = config.hardware.nvidia-jetpack.enable && lib.hasPrefix "orin" config.hardware.nvidia-jetpack.som;
+          message = "Orin MGBE0 host passthrough requires hardware.nvidia-jetpack on an Orin SoM.";
+        }
+      ];
+
+      services.udev.extraRules = ''
+        SUBSYSTEM=="vfio", GROUP="kvm"
+      '';
+
+      boot.blacklistedKernelModules = [
+        "nvethernet"
+        "dwmac-tegra"
+      ];
+
+      systemd.services.bindMgbe0 = {
+        description = "Bind MGBE0 (${mgbe0.sysfsName}) to the vfio-platform driver";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStartPre = "${pkgs.bash}/bin/bash -c \"echo vfio-platform > ${mgbe0DevicePath}/driver_override\"";
+          ExecStart = "${pkgs.bash}/bin/bash -c \"echo ${mgbe0.sysfsName} > /sys/bus/platform/drivers/vfio-platform/bind\"";
+        };
+      };
+
+      systemd.services.prepareMgbe0CrosvmOverlay = {
+        description = "Prepare the live MGBE0 device-tree overlay for Crosvm";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = lib.getExe mgbe0Artifacts.prepare;
+        };
+      };
+    })
+
+    (lib.mkIf cfg.mgbe0Guest.enable {
+      boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_12;
+      boot.kernelParams = [
+        "clk_ignore_unused"
+        "pd_ignore_unused"
+      ];
+      boot.kernelPatches = [
+        {
+          name = "dwmac-tegra fixed stream id";
+          patch = "${support}/patches/linux/0001-dwmac-tegra-fixed-stream-id.patch";
+        }
+        {
+          name = "BPMP virtualization proxy drivers";
+          patch = "${support}/patches/linux/bpmp-sources.patch";
+        }
+        {
+          name = "BPMP virtualization core hooks";
+          patch =
+            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
+            else
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch";
+        }
+        {
+          name = "BPMP guest proxy kernel configuration";
+          patch = null;
+          structuredExtraConfig = with lib.kernel; {
+            ARCH_TEGRA = yes;
+            ARCH_TEGRA_234_SOC = yes;
+            TEGRA_HSP_MBOX = yes;
+            TEGRA_IVC = yes;
+            TEGRA_BPMP = yes;
+            TEGRA_BPMP_GUEST_PROXY = yes;
+            TEGRA_BPMP_HOST_PROXY = no;
+            CLK_TEGRA_BPMP = yes;
+            RESET_TEGRA_BPMP = yes;
+            PM_GENERIC_DOMAINS = yes;
+            STMMAC_ETH = yes;
+            STMMAC_PLATFORM = yes;
+            DWMAC_TEGRA = yes;
+            AQUANTIA_PHY = yes;
+          };
+        }
+      ];
     })
   ];
 }
