@@ -60,7 +60,7 @@ let
 
       live_root=/sys/firmware/devicetree/base
       live_fdt=/sys/firmware/fdt
-      output=/run/mgbe0-net-vm.dtbo
+      output=${lib.escapeShellArg mgbe0.crosvmOverlayPath}
       temporary="$(mktemp --tmpdir=/run .mgbe0-net-vm.dtbo.XXXXXX)"
       trap 'rm -f "$temporary"' EXIT
       mapfile -d "" nodes < <(find "$live_root" -type d -name ${lib.escapeShellArg mgbe0.nodeName} -print0)
