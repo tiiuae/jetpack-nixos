@@ -19,6 +19,8 @@ runCommand "orin-virtualization-support"
   passthru = import ./manifest.nix { inherit lib; } // {
     inherit gbmNoModifiersShim;
     eglGbmSingleDevicePatch = ./patches/userspace/egl-gbm-single-device-fallback.patch;
+    mkGuestDtb = import ./builders/mk-guest-dtb.nix { inherit lib; };
+    mkCrosvmOverlay = import ./builders/mk-crosvm-overlay.nix { inherit lib; };
   };
 }
   ''
