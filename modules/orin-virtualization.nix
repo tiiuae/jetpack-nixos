@@ -46,6 +46,8 @@ let
   '';
 in
 {
+  imports = [ ./orin-gpu-virtualization.nix ];
+
   options.hardware.nvidia-jetpack.virtualization = {
     bpmpHost = {
       allowAllDomains = lib.mkOption {
