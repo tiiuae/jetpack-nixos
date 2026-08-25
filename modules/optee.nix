@@ -10,6 +10,7 @@ let
     ;
 
   cfg = config.hardware.nvidia-jetpack.firmware.optee;
+  cfgFw = config.hardware.nvidia-jetpack.firmware;
 
   inherit (pkgs.nvidia-jetpack) l4tAtLeast;
 
@@ -187,6 +188,18 @@ in
             '';
           };
         };
+
+        autoProvision = mkOption {
+          type = types.bool;
+          default = cfgFw.eksFile != null;
+          description = ''
+            Automatically provision fTPM EK certificates from the EKB
+            (hardware.nvidia-jetpack.firmware.eksFile) into TPM NV memory
+            on first boot. Defaults to true whenever eksFile is set, since
+            without it there's nothing to provision from. Enabling this
+            without eksFile set is a configuration error.
+          '';
+        };
       };
 
       patches = mkOption {
@@ -254,6 +267,13 @@ in
           message = ''
             supplicant.earlyBoot requires ftpm.enable (the initrd
             services are only useful for fTPM-based LUKS unlock).
+          '';
+        }
+        {
+          assertion = !cfg.ftpm.autoProvision || cfgFw.eksFile != null;
+          message = ''
+            hardware.nvidia-jetpack.firmware.optee.ftpm.autoProvision
+            requires hardware.nvidia-jetpack.firmware.eksFile to be set.
           '';
         }
         {
@@ -407,6 +427,29 @@ in
             ExecStop = stopScript;
             StateDirectory = "optee/ftpm";
           };
+        };
+
+        # tpm2-abrmd must wait for ftpm-driver to provide /dev/tpm0
+        systemd.services.tpm2-abrmd = lib.mkIf config.security.tpm2.abrmd.enable {
+          after = [ "ftpm-driver.service" ];
+          requires = [ "ftpm-driver.service" ];
+        };
+
+        # Provision fTPM EK certs from EKB into NV memory on first boot (fused devices only).
+        systemd.services.ftpm-device-provision = lib.mkIf cfg.ftpm.autoProvision {
+          description = "Provision fTPM EK certificates from EKB";
+          after = [ "ftpm-driver.service" ];
+          requires = [ "ftpm-driver.service" ];
+          before = [ "tpm2.target" "shutdown.target" ];
+          conflicts = [ "shutdown.target" ];
+          wantedBy = [ "tpm2.target" ];
+          unitConfig.DefaultDependencies = false;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = lib.getExe pkgs.nvidia-jetpack.ftpmAutoProvision;
+          };
+          environment.TPM2TOOLS_TCTI = "device:/dev/tpmrm0";
         };
       }
     ))
