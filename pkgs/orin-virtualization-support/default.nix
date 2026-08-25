@@ -16,7 +16,7 @@ in
 runCommand "orin-virtualization-support"
 {
   preferLocalBuild = true;
-  passthru = import ./manifest.nix // {
+  passthru = import ./manifest.nix { inherit lib; } // {
     inherit gbmNoModifiersShim;
     eglGbmSingleDevicePatch = ./patches/userspace/egl-gbm-single-device-fallback.patch;
   };
