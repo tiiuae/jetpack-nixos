@@ -19,7 +19,8 @@
 }@args:
 
 let
-  tagVersion = if lib.versions.patch l4tMajorMinorPatchVersion == "0" then lib.versions.majorMinor l4tMajorMinorPatchVersion else l4tMajorMinorPatchVersion;
+  # NVIDIA never published an r36.5.2 EDK2 tag; stay on r36.5.1.
+  tagVersion = "36.5.1";
 
   # See: https://github.com/NVIDIA/edk2-edkrepo-manifest/blob/main/edk2-nvidia/Platform/NVIDIAPlatformsManifest.xml
   defaultOrigin = {
@@ -28,14 +29,14 @@ let
   };
   repos = {
     edk2 = {
-      sha256 = "sha256-4zFyQ4g+oJp9kkSamx11bfDMRY+9g6Vzsuau9ozC/R0=";
+      sha256 = "sha256-G/WxxAb4OUH5bkRvSQN8YYYzb4HBNqokfyWA/gNhqXo=";
       fetchSubmodules = true;
     };
     edk2-platforms.sha256 = "sha256-PsKxy/tiRl2/qcL/JQNXbUPsnWekAQ+4b+NiccSRGa4=";
     edk2-non-osi.sha256 = "sha256-Dj6Og/sc3MEMU/37rUMu7miHOvFi3Qvfkm+nMSUBUF0=";
     edk2-infineon.sha256 = "sha256-47UJfEd4ViTenx5dvy2G75NFSgmcsyIWpN0Lv1QlvA8=";
     edk2-redfish-client.sha256 = "sha256-EUWi5z+1sz2zMZM6x/sqE2NvdHRkQwQOcotsUwELsBY=";
-    edk2-nvidia.sha256 = "sha256-CW1tDcNxA0uod4fmJq3jx1zp+AmS7/akY14zF2LyF4g=";
+    edk2-nvidia.sha256 = "sha256-6QF/NhdZIXabonAryv/FpX+euv/tmsKTx1p0COLW2XU=";
     edk2-nvidia-non-osi.sha256 = "sha256-bb5pb2nF6Ht5UpTt7Kv2lP46T+MttmgzFCJGd5xnrXs=";
   };
 

@@ -11,7 +11,7 @@
 }@args:
 buildLinux (args // {
   # See Makefile in kernel source root for VERSION/PATCHLEVEL/SUBLEVEL.
-  version = "5.15.185";
+  version = "5.15.199";
   extraMeta.branch = "5.15";
 
   defconfig = "defconfig";

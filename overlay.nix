@@ -32,15 +32,15 @@ in
   nvidia-jetpack6 = import ./mk-overlay.nix
     {
       # Below 3 are from release notes
-      jetpackMajorMinorPatchVersion = "6.2.2";
-      l4tMajorMinorPatchVersion = "36.5.0";
+      jetpackMajorMinorPatchVersion = "6.2.3";
+      l4tMajorMinorPatchVersion = "36.5.2";
       cudaMajorMinorPatchVersion = "12.6.10";
 
       # nix build .#nvidia-jetpack6.l4t-3d-core.src; find
       # libnvidia-ptxjitcompiler.so and use that.
       cudaDriverMajorMinorVersion = "540.5.0";
 
-      bspHash = "sha256-QU5Y2XrEuE+wLLymIdRlmPC8i4Eba5w613iwTo0yHKc=";
+      bspHash = "sha256-dSMmJkxeFoJtMESnjlmuBhCUZ9N3BRQ7lOZkyRpHH0c=";
       bspPostPatch =
         let
           overlay_mb1bct = final.fetchzip {
