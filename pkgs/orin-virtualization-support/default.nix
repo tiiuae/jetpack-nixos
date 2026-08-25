@@ -2,13 +2,24 @@
 # SPDX-License-Identifier: Apache-2.0
 { lib
 , runCommand
+, runCommandCC
 , bpmpAllowAllDomains ? false
 ,
 }:
+let
+  gbmNoModifiersShim = runCommandCC "orin-gbm-no-modifiers-shim" { } ''
+    mkdir -p "$out/lib"
+    $CC -O2 -fPIC -shared -o "$out/lib/gbm-nomod-shim.so" \
+      ${./sources/userspace/gbm-nomod-shim.c} -ldl
+  '';
+in
 runCommand "orin-virtualization-support"
 {
   preferLocalBuild = true;
-  passthru = import ./manifest.nix;
+  passthru = import ./manifest.nix // {
+    inherit gbmNoModifiersShim;
+    eglGbmSingleDevicePatch = ./patches/userspace/egl-gbm-single-device-fallback.patch;
+  };
 }
   ''
     mkdir -p "$out"
