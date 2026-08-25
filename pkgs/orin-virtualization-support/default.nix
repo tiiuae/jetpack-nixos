@@ -8,11 +8,13 @@
 runCommand "orin-virtualization-support"
 {
   preferLocalBuild = true;
+  passthru = import ./manifest.nix;
 }
   ''
     mkdir -p "$out"
     cp -r ${./sources} "$out/sources"
     cp -r ${./patches} "$out/patches"
+    cp -r ${./device-trees} "$out/device-trees"
     chmod -R u+w "$out"
 
     ${lib.optionalString bpmpAllowAllDomains ''
