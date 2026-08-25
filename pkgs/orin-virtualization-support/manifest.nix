@@ -4,16 +4,15 @@
 { lib }:
 let
   hex = lib.fromHexString;
+  formatAddress = value: "0x${lib.toLower (lib.toHexString value)}";
+
   agx = {
     dcbDtsi = "generated/agx-p3737-p3701-dcb.dtsi";
     dcbSha256 = "e0d92e6dbf1ffef266cfd2e192847e76f8d88c19c55430f2f5d4aaf69494a2fc";
     dcbBytes = "8407";
   };
-in
-{
-  bpmpPolicies = import ./bpmp-policies.nix;
 
-  passthrough = {
+  hardware = rec {
     crosvmLayout = rec {
       memoryBase = hex "0x2000000000";
       platformMmio = {
@@ -98,7 +97,159 @@ in
         symbol = "nvjpg";
       };
     };
+
+    mgbe0 = {
+      sysfsName = "6800000.ethernet";
+      nodeName = "ethernet@6800000";
+      nodePath = "/bus@0/ethernet@6800000";
+      compatible = "nvidia,tegra234-mgbe";
+      dtSymbol = "mgbe0";
+    };
+
+    displayCardPath = "/dev/dri/by-path/platform-66200000.display-card";
   };
+
+  mkRole =
+    name: capabilities:
+    let
+      inherit (capabilities) display gpu host1x;
+      displayOnly = display && !gpu && !host1x;
+      computeWithHost1x = gpu && host1x && !display;
+      reservedMemory =
+        if displayOnly then
+          with hardware.reservedMemory;
+          [
+            scanout
+            dispRamLow
+            dispRamHigh
+          ]
+        else
+          lib.optional host1x hardware.reservedMemory.vmHs
+          ++ [ hardware.reservedMemory.vmCma ]
+          ++ lib.optional (!computeWithHost1x) hardware.reservedMemory.scanout;
+      displayCaps = lib.optionals display hardware.displayCaps;
+      engines =
+        lib.optional gpu hardware.engines.gpu
+        ++ lib.optionals host1x [
+          hardware.engines.host1x
+          hardware.engines.vic
+          hardware.engines.nvdec
+          hardware.engines.nvjpg
+        ];
+      hostDevices = map (device: device.dev) (reservedMemory ++ displayCaps ++ engines);
+    in
+    {
+      inherit
+        capabilities
+        displayCaps
+        engines
+        hostDevices
+        name
+        reservedMemory
+        ;
+
+      expDtDefines =
+        lib.optionalString (!host1x) "-DEXP_DROP_HOST1X "
+        + lib.optionalString (!display) "-DEXP_DROP_DISPLAY "
+        + lib.optionalString displayOnly "-DEXP_DROP_GPU "
+        + lib.optionalString computeWithHost1x "-DEXP_SHRINK_BANK1 ";
+
+      guestDts = if displayOnly then "disp-vm/tegra234-dispvm.dts" else "gpu-vm/tegra234-gpuvm.dts";
+      dtbName = if displayOnly then "tegra234-dispvm.dtb" else "tegra234-gpuvm.dtb";
+      crosvmOverlayDts =
+        if displayOnly then
+          "disp-vm/tegra234-dispvm-crosvm-overlay.dts"
+        else
+          "gpu-vm/tegra234-guivm-crosvm-overlay.dts";
+      crosvmOverlayName = "tegra234-${name}-crosvm-overlay";
+
+      vfioArgs =
+        lib.concatMap
+          (resource: [
+            "-device"
+            "vfio-platform,host=${resource.dev},mmio-base=${formatAddress resource.base}"
+          ])
+          (reservedMemory ++ displayCaps)
+        ++ lib.concatMap
+          (device: [
+            "-device"
+            "vfio-platform,host=${device.dev}"
+          ])
+          engines;
+
+      crosvmDevices =
+        map
+          (resource: {
+            path = resource.dev;
+            dtSymbol = resource.symbol;
+            iommu = "off";
+            mmioBase = resource.base;
+            mapEarly = true;
+          })
+          reservedMemory
+        ++ map
+          (resource: {
+            path = resource.dev;
+            dtSymbol = resource.symbol;
+            iommu = "off";
+            mmioBase = resource.base;
+          })
+          displayCaps
+        ++ map
+          (device: {
+            path = device.dev;
+            dtSymbol = device.symbol;
+            iommu = "off";
+          })
+          engines;
+
+      guestKernelModules =
+        lib.optionals host1x [
+          "nvmap"
+          "host1x"
+          "nvhost"
+          "nvgpu"
+        ]
+        ++ lib.optionals display [
+          "nvmap"
+          "tegra-dce"
+          "dce-guest-proxy"
+          "nvidia-modeset"
+          "nvidia-drm"
+        ];
+
+      needsDceBridge = display;
+      noSyncpointPatch = capabilities.noSyncpointDisplay;
+      inherit (hardware) crosvmLayout;
+    };
+
+  roles = {
+    compute = mkRole "gpuvm" {
+      gpu = true;
+      host1x = true;
+      media = true;
+      display = false;
+      noSyncpointDisplay = false;
+    };
+    display = mkRole "dispvm" {
+      gpu = false;
+      host1x = false;
+      media = false;
+      display = true;
+      noSyncpointDisplay = true;
+    };
+    combined = mkRole "guivm" {
+      gpu = true;
+      host1x = true;
+      media = true;
+      display = true;
+      noSyncpointDisplay = false;
+    };
+  };
+in
+{
+  bpmpPolicies = import ./bpmp-policies.nix;
+  passthrough = hardware // { inherit roles; };
 
   boards = {
     inherit agx;
