@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <soc/tegra/bpmp.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 #include <linux/miscdevice.h>
 #include "bpmp-host-proxy.h"
 
@@ -228,13 +229,25 @@ static int bpmp_host_proxy_probe(struct platform_device *pdev)
 /*
  * Removes module, sends appropriate message to kernel
  */
-static int bpmp_host_proxy_remove(struct platform_device *pdev)
+static int bpmp_host_proxy_remove_impl(struct platform_device *pdev)
 {
 	struct bpmp_host_proxy *proxy = platform_get_drvdata(pdev);
 
 	misc_deregister(&proxy->miscdev);
 	return 0;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static void bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	bpmp_host_proxy_remove_impl(pdev);
+}
+#else
+static int bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	return bpmp_host_proxy_remove_impl(pdev);
+}
+#endif
 
 /*
  * Opens device module, sends appropriate message to kernel
