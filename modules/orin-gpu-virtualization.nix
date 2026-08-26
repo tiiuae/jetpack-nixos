@@ -65,6 +65,12 @@ in
 
     gpuPassthroughGuest = {
       enable = lib.mkEnableOption "Orin GPU/display passthrough guest support";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.linuxPackages_6_12;
+        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        description = "Base kernel package set used by an Orin GPU/display guest.";
+      };
       role = lib.mkOption {
         type = lib.types.enum [
           "compute"
@@ -211,8 +217,18 @@ in
         "${pkgs.addDriverRunpath.driverLink}/share/egl/egl_external_platform.d/";
 
       boot.kernelPackages = lib.mkForce (
-        (pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
+        (cfg.gpuPassthroughGuest.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
           _final: prev: {
+            devicetree =
+              if lib.versionAtLeast prev.kernel.version "7.1" then
+                prev.devicetree.overrideAttrs
+                  (old: {
+                    postPatch = (old.postPatch or "") + ''
+                      sed -i '/-Wno-graph_child_address/d' kernel-devicetree/scripts/Makefile.lib
+                    '';
+                  })
+              else
+                prev.devicetree;
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               patches =
                 (old.patches or [ ])
@@ -231,6 +247,14 @@ in
                 ]
                 ++ lib.optional guestPayload.noSyncpointPatch "${support}/patches/nvidia-oot/gpu-display/0021-nvkms-force-no-syncpt-support.patch";
               postPatch = (old.postPatch or "") + ''
+                ${lib.optionalString (lib.versionAtLeast prev.kernel.version "7.1") ''
+                  substituteInPlace hwpm/drivers/tegra/hwpm/os/linux/driver.c \
+                    --replace-fail '#if defined(NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG)' '#if 1 /* Linux 7.1 */' \
+                    --replace-fail '#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */' '#if 1 /* Linux 7.1 */'
+                  substituteInPlace hwpm/drivers/tegra/hwpm/os/linux/mem_mgmt_utils.c \
+                    --replace-fail 'MODULE_IMPORT_NS(DMA_BUF);' 'MODULE_IMPORT_NS("DMA_BUF");' \
+                    --replace-fail '#if defined(NV_GET_USER_PAGES_HAS_ARGS_FLAGS) /* Linux v6.5 */' '#if 1 /* Linux 7.1 */'
+                ''}
                 patch -p1 -d nvidia-oot < ${support}/patches/nvidia-oot/dce/0001-dce-virt-hooks.patch
                 patch -p1 -d nvidia-oot < ${support}/patches/nvidia-oot/dce/0002-dce-client-ipc-inject.patch
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-guest-proxy/dce-guest-proxy.c \
@@ -262,7 +286,11 @@ in
         }
         {
           name = "bpmp-virt core hooks";
-          patch = "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch";
+          patch =
+            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch";
         }
         {
           name = "bpmp guest proxy kernel configuration";

@@ -19,6 +19,16 @@ let
     inherit pkgs support;
     hostDtb = "${config.hardware.deviceTree.package}/${config.hardware.deviceTree.name}";
   };
+  hostNvidiaOotMakefile = pkgs.writeText "nvidia-oot-host-Makefile" ''
+    # SPDX-License-Identifier: GPL-2.0
+
+    LINUXINCLUDE += -I$(srctree.nvconftest)
+    LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
+
+    subdir-ccflags-y += -Werror
+    subdir-ccflags-y += -Wmissing-prototypes
+    obj-m += drivers/platform/tegra/dce/
+  '';
   bpmpHostOverlay = pkgs.writeText "bpmp-host-overlay.dts" ''
     /dts-v1/;
     /plugin/;
@@ -96,9 +106,25 @@ in
       };
     };
 
-    dceHost.enable = lib.mkEnableOption "the Orin DCE display host proxy";
+    dceHost = {
+      enable = lib.mkEnableOption "the Orin DCE display host proxy";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.nvidia-jetpack.kernelPackages;
+        defaultText = lib.literalExpression "pkgs.nvidia-jetpack.kernelPackages";
+        description = "Base kernel package set used by the Orin DCE host.";
+      };
+    };
     mgbe0Host.enable = lib.mkEnableOption "host support for passing Orin MGBE0 through to a guest";
-    mgbe0Guest.enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
+    mgbe0Guest = {
+      enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.linuxPackages_6_12;
+        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        description = "Base kernel package set used by the Orin MGBE0 guest.";
+      };
+    };
   };
 
   config = lib.mkMerge [
@@ -132,6 +158,9 @@ in
             VFIO_PLATFORM = yes;
             TEGRA_BPMP_GUEST_PROXY = lib.mkDefault no;
             TEGRA_BPMP_HOST_PROXY = yes;
+          }
+          // lib.optionalAttrs (lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1") {
+            IOMMUFD = yes;
           };
         }
         {
@@ -182,14 +211,39 @@ in
       ];
 
       boot.kernelPackages = lib.mkForce (
-        (pkgs.nvidia-jetpack.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
+        (cfg.dceHost.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
           _final: prev: {
+            devicetree =
+              if lib.versionAtLeast prev.kernel.version "7.1" then
+                prev.devicetree.overrideAttrs
+                  (old: {
+                    postPatch = (old.postPatch or "") + ''
+                      sed -i '/-Wno-graph_child_address/d' kernel-devicetree/scripts/Makefile.lib
+                    '';
+                  })
+              else
+                prev.devicetree;
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
                 pkgs.buildPackages.dtc
                 pkgs.buildPackages.unixtools.xxd
               ];
               postPatch = (old.postPatch or "") + ''
+                ${lib.optionalString (lib.versionAtLeast prev.kernel.version "7.1") ''
+                  substituteInPlace Makefile \
+                    --replace-fail 'modules: hwpm nvidia-oot nvgpu nvidia-display' 'modules: nvidia-oot' \
+                    --replace-fail 'modules_install: hwpm nvidia-oot nvgpu nvidia-display-install' 'modules_install: nvidia-oot' \
+                    --replace-fail 'nvidia-oot: conftest hwpm' 'nvidia-oot: conftest'
+                  sed -i '/KBUILD_EXTRA_SYMBOLS=.*hwpm.*Module.symvers/d' Makefile
+                  install -m 0644 ${hostNvidiaOotMakefile} nvidia-oot/Makefile
+
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-ipc.c \
+                    --replace-fail '#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)' '#if 1 /* Linux 7.1 iosys_map IVC */'
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/include/dce-ipc.h \
+                    --replace-fail '#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)' '#if 1 /* Linux 7.1 iosys_map IVC */'
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-module.c \
+                    --replace-fail '#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */' '#if 1 /* Linux 7.1 */'
+                ''}
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.c \
                   nvidia-oot/drivers/platform/tegra/dce/dce-host-proxy.c
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.h \
@@ -274,7 +328,7 @@ in
     })
 
     (lib.mkIf cfg.mgbe0Guest.enable {
-      boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_12;
+      boot.kernelPackages = lib.mkForce cfg.mgbe0Guest.kernelPackages;
       boot.kernelParams = [
         "clk_ignore_unused"
         "pd_ignore_unused"
@@ -291,7 +345,9 @@ in
         {
           name = "BPMP virtualization core hooks";
           patch =
-            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
+            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
             else
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch";
