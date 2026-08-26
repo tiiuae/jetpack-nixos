@@ -147,6 +147,7 @@
       // supportedNixOSConfigurations;
 
       nixosModules.default = import ./modules/default.nix self.overlays.default;
+      nixosModules.orin-virtualization = ./modules/orin-virtualization.nix;
 
       overlays.default = final: prev:
         # We've already applied our overlay and should not apply it again.

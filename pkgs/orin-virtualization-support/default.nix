@@ -3,6 +3,8 @@
 { lib
 , runCommand
 , runCommandCC
+, writeShellApplication
+, iproute2
 , bpmpAllowAllDomains ? false
 ,
 }:
@@ -12,13 +14,46 @@ let
     $CC -O2 -fPIC -shared -o "$out/lib/gbm-nomod-shim.so" \
       ${./sources/userspace/gbm-nomod-shim.c} -ldl
   '';
+  quiesceMgbe0 = writeShellApplication {
+    name = "quiesce-mgbe0";
+    runtimeInputs = [ iproute2 ];
+    text = ''
+      set -eu
+
+      driver_path=/sys/bus/platform/drivers/tegra-mgbe
+      if [ ! -d "$driver_path" ]; then
+        echo "MGBE0 driver path is missing: $driver_path" >&2
+        exit 1
+      fi
+
+      found=0
+      for device in "$driver_path"/*; do
+        [ -d "$device/net" ] || continue
+        for path in "$device/net"/*; do
+          [ -e "$path" ] || continue
+          found=1
+          interface="''${path##*/}"
+          echo "Quiescing MGBE0 interface $interface from ''${device##*/}"
+          ip link set dev "$interface" down
+        done
+      done
+
+      if [ "$found" -eq 0 ]; then
+        echo "No MGBE0 network interface found under $driver_path" >&2
+        exit 1
+      fi
+    '';
+  };
 in
 runCommand "orin-virtualization-support"
 {
   preferLocalBuild = true;
-  passthru = import ./manifest.nix // {
-    inherit gbmNoModifiersShim;
+  passthru = import ./manifest.nix { inherit lib; } // {
+    inherit gbmNoModifiersShim quiesceMgbe0;
     eglGbmSingleDevicePatch = ./patches/userspace/egl-gbm-single-device-fallback.patch;
+    mkGuestDtb = import ./builders/mk-guest-dtb.nix { inherit lib; };
+    mkCrosvmOverlay = import ./builders/mk-crosvm-overlay.nix { inherit lib; };
+    mkMgbe0Overlay = import ./builders/mk-mgbe0-overlay.nix { inherit lib; };
   };
 }
   ''

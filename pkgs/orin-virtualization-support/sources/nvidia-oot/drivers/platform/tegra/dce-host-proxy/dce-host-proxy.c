@@ -3,6 +3,7 @@
 // tegra-dce's CPU_RM client interface. Char-device scaffold and bounce-buffer
 // hygiene mirror bpmp-host-proxy.c.
 #include <linux/module.h>
+#include <linux/atomic.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/fs.h>
@@ -16,6 +17,7 @@
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/wait.h>
+#include <linux/version.h>
 #include <linux/platform/tegra/dce/dce-client-ipc.h>
 #include "dce-host-proxy.h"
 
@@ -49,6 +51,7 @@ static int major_number;
 
 static struct class *dce_host_proxy_class = NULL;
 static struct device *dce_host_proxy_device = NULL;
+static atomic_t dce_host_proxy_opened = ATOMIC_INIT(0);
 
 // CPU_RM IPC client, registered lazily on first write() under
 // dce_host_client_lock, torn down in remove().
@@ -236,6 +239,37 @@ static void dce_host_proxy_event_cb(u32 handle, u32 interface_type,
 	dce_host_proxy_queue_event(interface_type, msg_length, msg_data);
 }
 
+static void dce_host_proxy_unregister_clients(void)
+{
+	mutex_lock(&dce_host_client_lock);
+	if (dce_host_client_registered) {
+		tegra_dce_unregister_ipc_client(dce_host_client_handle);
+		dce_host_client_registered = false;
+		dce_host_client_handle = 0;
+		pr_info("dce_host_proxy: unregistered CPU_RM client\n");
+	}
+	mutex_unlock(&dce_host_client_lock);
+
+	mutex_lock(&dce_host_event_client_lock);
+	if (dce_host_event_registered) {
+		tegra_dce_unregister_ipc_client(dce_host_event_handle);
+		dce_host_event_registered = false;
+		dce_host_event_handle = 0;
+		pr_info("dce_host_proxy: unregistered RM_EVENT client\n");
+	}
+	mutex_unlock(&dce_host_event_client_lock);
+}
+
+static void dce_host_proxy_reset_events(void)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&dce_evt_lock, flags);
+	dce_evt_head = 0;
+	dce_evt_tail = 0;
+	spin_unlock_irqrestore(&dce_evt_lock, flags);
+}
+
 static int dce_host_proxy_probe(struct platform_device *pdev)
 {
 	deb_info("%s, installing module.", __func__);
@@ -281,23 +315,11 @@ static int dce_host_proxy_probe(struct platform_device *pdev)
 
 
 
-static int dce_host_proxy_remove(struct platform_device *pdev)
+static int dce_host_proxy_remove_impl(struct platform_device *pdev)
 {
 	deb_info("removing module.\n");
 
-	mutex_lock(&dce_host_client_lock);
-	if (dce_host_client_registered) {
-		tegra_dce_unregister_ipc_client(dce_host_client_handle);
-		dce_host_client_registered = false;
-	}
-	mutex_unlock(&dce_host_client_lock);
-
-	mutex_lock(&dce_host_event_client_lock);
-	if (dce_host_event_registered) {
-		tegra_dce_unregister_ipc_client(dce_host_event_handle);
-		dce_host_event_registered = false;
-	}
-	mutex_unlock(&dce_host_event_client_lock);
+	dce_host_proxy_unregister_clients();
 
 	// Both clients gone: no callback can queue any more, safe to free the
 	// ring. Wake any reader blocked in read() first.
@@ -317,14 +339,38 @@ static int dce_host_proxy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static void dce_host_proxy_remove(struct platform_device *pdev)
+{
+	dce_host_proxy_remove_impl(pdev);
+}
+#else
+static int dce_host_proxy_remove(struct platform_device *pdev)
+{
+	return dce_host_proxy_remove_impl(pdev);
+}
+#endif
+
 static int open(struct inode *inodep, struct file *filep)
 {
+	if (atomic_cmpxchg(&dce_host_proxy_opened, 0, 1) != 0)
+		return -EBUSY;
+
+	dce_host_proxy_reset_events();
 	deb_info("device opened.\n");
 	return 0;
 }
 
 static int close(struct inode *inodep, struct file *filep)
 {
+	/*
+	 * A new VMM must register fresh CPU_RM and RM_EVENT clients. DCE keeps
+	 * per-client channel state, so retaining these handles after Crosvm exits
+	 * leaves the next guest unable to map its register space.
+	 */
+	dce_host_proxy_unregister_clients();
+	dce_host_proxy_reset_events();
+	atomic_set(&dce_host_proxy_opened, 0);
 	deb_info("device closed.\n");
 	return 0;
 }

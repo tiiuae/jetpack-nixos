@@ -13,11 +13,14 @@
 #include <linux/slab.h>
 #include <soc/tegra/bpmp.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
+#include <linux/miscdevice.h>
 #include "bpmp-host-proxy.h"
 
 
 #define DEVICE_NAME "bpmp-host"   // Device name.
-#define CLASS_NAME  "chardrv"	  // < The device class -- this is a character device driver
+#define MRQ_CLK_ID_MASK GENMASK(23, 0)
+#define MRQ_CLK_CMD_SHIFT 24
 
 MODULE_LICENSE("GPL");						 ///< The license type -- this affects available functionality
 MODULE_AUTHOR("Vadim Likholetov");					 ///< The author -- visible when you use modinfo
@@ -49,13 +52,10 @@ MODULE_VERSION("0.1");						 ///< A version number to inform users
 #define deb_error(...)    printk(KERN_ALERT DEVICE_NAME ": "__VA_ARGS__)
 #define deb_warn(...)     printk(KERN_WARNING DEVICE_NAME ": "__VA_ARGS__)
 
-/**
- * Important variables that store data and keep track of relevant information.
- */
-static int major_number;
-
-static struct class *bpmp_host_proxy_class = NULL;	///< The device-driver class struct pointer
-static struct device *bpmp_host_proxy_device = NULL; ///< The device-driver device struct pointer
+struct bpmp_host_proxy {
+	struct miscdevice miscdev;
+	struct bpmp_allowed_res allowed;
+};
 
 /**
  * Prototype functions for file operations.
@@ -68,7 +68,7 @@ static ssize_t write(struct file *, const char __user *, size_t, loff_t *);
 /**
  * File operations structure and the functions it points to.
  */
-static struct file_operations fops =
+static const struct file_operations fops =
 	{
 		.owner = THIS_MODULE,
 		.open = open,
@@ -76,9 +76,6 @@ static struct file_operations fops =
 		.read = read,
 		.write = write,
 };
-
-// BPMP allowed resources structure
-static struct bpmp_allowed_res bpmp_ares; 
 
 #if BPMP_HOST_VERBOSE
 // Usage:
@@ -173,79 +170,57 @@ void static hexDump (
  */
 static int bpmp_host_proxy_probe(struct platform_device *pdev)
 {
+	struct bpmp_host_proxy *proxy;
+	const char *device_name;
 	int i;
-	
+	int ret;
+
 	deb_info("%s, installing module.", __func__);
 
-	// Read allowed clocks and resets from the device tree
-	// if they are defined or BPMP_HOST_ALLOWS_ALL continue
-	bpmp_ares.clocks_size = of_property_read_variable_u32_array(pdev->dev.of_node, 
-		"allowed-clocks", bpmp_ares.clock, 0, BPMP_HOST_MAX_CLOCKS_SIZE);
+	proxy = devm_kzalloc(&pdev->dev, sizeof(*proxy), GFP_KERNEL);
+	if (!proxy)
+		return -ENOMEM;
 
-	if(!bpmp_ares.clocks_size && !BPMP_HOST_ALLOWS_ALL){
-		deb_error("No allowed clocks defined");
-		return EINVAL;
-	}
+	ret = of_property_read_string(pdev->dev.of_node, "device-name", &device_name);
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret, "missing device-name\n");
 
-	deb_info("bpmp_ares.clocks_size: %d", bpmp_ares.clocks_size);
-	for (i = 0; i < bpmp_ares.clocks_size; i++)	{
-		deb_info("bpmp_ares.clock %d", bpmp_ares.clock[i]);
-	}
+	proxy->allowed.clocks_size = of_property_read_variable_u32_array(
+		pdev->dev.of_node, "allowed-clocks", proxy->allowed.clock, 0,
+		BPMP_HOST_MAX_CLOCKS_SIZE);
+	if (proxy->allowed.clocks_size <= 0 && !BPMP_HOST_ALLOWS_ALL)
+		return dev_err_probe(&pdev->dev, -EINVAL, "no allowed clocks defined\n");
 
-	bpmp_ares.resets_size = of_property_read_variable_u32_array(pdev->dev.of_node, 
-		"allowed-resets", bpmp_ares.reset, 0, BPMP_HOST_MAX_RESETS_SIZE);
+	for (i = 0; i < proxy->allowed.clocks_size; i++)
+		deb_info("allowed clock %d", proxy->allowed.clock[i]);
 
-	if(!bpmp_ares.resets_size && !BPMP_HOST_ALLOWS_ALL){
-		deb_error("No allowed resets defined");
-		return EINVAL;
-	}
+	proxy->allowed.resets_size = of_property_read_variable_u32_array(
+		pdev->dev.of_node, "allowed-resets", proxy->allowed.reset, 0,
+		BPMP_HOST_MAX_RESETS_SIZE);
+	if (proxy->allowed.resets_size <= 0 && !BPMP_HOST_ALLOWS_ALL)
+		return dev_err_probe(&pdev->dev, -EINVAL, "no allowed resets defined\n");
 
-	deb_info("bpmp_ares.resets_size: %d", bpmp_ares.resets_size);
-	for (i = 0; i < bpmp_ares.resets_size; i++)	{
-		deb_info("bpmp_ares.reset %d", bpmp_ares.reset[i]);
-	}
+	for (i = 0; i < proxy->allowed.resets_size; i++)
+		deb_info("allowed reset %d", proxy->allowed.reset[i]);
 
+	proxy->allowed.pd_size = of_property_read_variable_u32_array(
+		pdev->dev.of_node, "allowed-power-domains", proxy->allowed.pd, 0,
+		BPMP_HOST_MAX_POWER_DOMAINS_SIZE);
+	for (i = 0; i < proxy->allowed.pd_size; i++)
+		deb_info("allowed power domain %d", proxy->allowed.pd[i]);
 
-	// Read allowed power domains from the device tree
-	bpmp_ares.pd_size = of_property_read_variable_u32_array(pdev->dev.of_node, 
-		"allowed-power-domains", bpmp_ares.pd, 0, BPMP_HOST_MAX_POWER_DOMAINS_SIZE);
+	proxy->miscdev.minor = MISC_DYNAMIC_MINOR;
+	proxy->miscdev.name = devm_kstrdup(&pdev->dev, device_name, GFP_KERNEL);
+	proxy->miscdev.fops = &fops;
+	proxy->miscdev.parent = &pdev->dev;
+	if (!proxy->miscdev.name)
+		return -ENOMEM;
 
-	deb_info("bpmp_ares.pd_size: %d", bpmp_ares.pd_size);
-	for (i = 0; i < bpmp_ares.pd_size; i++)	{
-		deb_info("bpmp_ares.pd %d", bpmp_ares.pd[i]);
-	}
+	ret = misc_register(&proxy->miscdev);
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret, "failed to register %s\n", device_name);
 
-	// Allocate a major number for the device.
-	major_number = register_chrdev(0, DEVICE_NAME, &fops);
-	if (major_number < 0)
-	{
-		deb_error("could not register number.\n");
-		return major_number;
-	}
-	deb_info("registered correctly with major number %d\n", major_number);
-
-	// Register the device class
-	bpmp_host_proxy_class = class_create(CLASS_NAME);
-	if (IS_ERR(bpmp_host_proxy_class))
-	{ // Check for error and clean up if there is
-		unregister_chrdev(major_number, DEVICE_NAME);
-		deb_error("Failed to register device class\n");
-		return PTR_ERR(bpmp_host_proxy_class); // Correct way to return an error on a pointer
-	}
-	deb_info("device class registered correctly\n");
-
-	// Register the device driver
-	bpmp_host_proxy_device = device_create(bpmp_host_proxy_class, NULL, MKDEV(major_number, 0), NULL, DEVICE_NAME);
-	if (IS_ERR(bpmp_host_proxy_device))
-	{								 // Clean up if there is an error
-		class_destroy(bpmp_host_proxy_class); 
-		unregister_chrdev(major_number, DEVICE_NAME);
-		deb_error("Failed to create the device\n");
-		return PTR_ERR(bpmp_host_proxy_device);
-	}
-
-	deb_info("device class created correctly\n"); // Made it! device was initialized
-
+	platform_set_drvdata(pdev, proxy);
 	return 0;
 }
 
@@ -254,17 +229,25 @@ static int bpmp_host_proxy_probe(struct platform_device *pdev)
 /*
  * Removes module, sends appropriate message to kernel
  */
-static int bpmp_host_proxy_remove(struct platform_device *pdev)
+static int bpmp_host_proxy_remove_impl(struct platform_device *pdev)
 {
-	deb_info("removing module.\n");
-	device_destroy(bpmp_host_proxy_class, MKDEV(major_number, 0)); // remove the device
-	class_unregister(bpmp_host_proxy_class);						  // unregister the device class
-	class_destroy(bpmp_host_proxy_class);						  // remove the device class
-	unregister_chrdev(major_number, DEVICE_NAME);		  // unregister the major number
-	deb_info("Goodbye from the LKM!\n");
-	unregister_chrdev(major_number, DEVICE_NAME);
+	struct bpmp_host_proxy *proxy = platform_get_drvdata(pdev);
+
+	misc_deregister(&proxy->miscdev);
 	return 0;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static void bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	bpmp_host_proxy_remove_impl(pdev);
+}
+#else
+static int bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	return bpmp_host_proxy_remove_impl(pdev);
+}
+#endif
 
 /*
  * Opens device module, sends appropriate message to kernel
@@ -325,12 +308,14 @@ static bool clk_root_is_protected(uint32_t clk_id)
 	return false;
 }
 
-static bool check_if_allowed(struct tegra_bpmp_message *msg)
+static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
+			     struct tegra_bpmp_message *msg)
 {
 	struct mrq_reset_request *reset_req = NULL;
 	struct mrq_clk_request *clock_req = NULL;
 	struct mrq_pg_request *pg_req = NULL;
 	uint32_t clk_cmd = 0;
+	uint32_t clk_id = 0;
 	int i = 0;
 
 	// Allow get information, DVFS, ISO Client and bandwidth mrqs
@@ -338,7 +323,6 @@ static bool check_if_allowed(struct tegra_bpmp_message *msg)
 	   msg->mrq == MRQ_QUERY_TAG ||
 	   msg->mrq == MRQ_THREADED_PING ||
 	   msg->mrq == MRQ_QUERY_ABI ||
-	   msg->mrq == MRQ_DEBUG ||
 	   msg->mrq == MRQ_EMC_DVFS_LATENCY ||
 	   msg->mrq == MRQ_EMC_DVFS_EMCHUB ||
 	   msg->mrq == MRQ_ISO_CLIENT ||
@@ -360,8 +344,8 @@ static bool check_if_allowed(struct tegra_bpmp_message *msg)
 		}
 		reset_req = (struct mrq_reset_request*) msg->tx.data;
 
-		for(i = 0; i < bpmp_ares.resets_size; i++){
-			if(bpmp_ares.reset[i] == reset_req->reset_id){
+		for(i = 0; i < allowed->resets_size; i++){
+			if(allowed->reset[i] == reset_req->reset_id){
 				return true;
 			}
 		}
@@ -374,34 +358,58 @@ static bool check_if_allowed(struct tegra_bpmp_message *msg)
 			return false;
 		}
 		clock_req = (struct mrq_clk_request*) msg->tx.data;
-		clk_cmd = (clock_req->cmd_and_id >> 24) & 0x000F;
+		clk_cmd = clock_req->cmd_and_id >> MRQ_CLK_CMD_SHIFT;
+		clk_id = clock_req->cmd_and_id & MRQ_CLK_ID_MASK;
 
-		for(i = 0; i < bpmp_ares.clocks_size; i++){
+		/* Clock discovery is read-only and the Linux BPMP clock provider
+		 * performs it across the complete firmware clock namespace. Restricting
+		 * these queries to an ownership list makes unrelated clock probes fail
+		 * and can prevent an otherwise-owned device clock from registering.
+		 * Keep all state-changing operations policed by the per-VM list below. */
+		if (clk_cmd == CMD_CLK_GET_RATE ||
+		    clk_cmd == CMD_CLK_GET_PARENT ||
+		    clk_cmd == CMD_CLK_IS_ENABLED ||
+		    /* Linux 7.1 removed these legacy discovery commands from the
+		     * upstream BPMP ABI after consolidating discovery in
+		     * CMD_CLK_GET_ALL_INFO. NVIDIA 6.6 and 6.12 still expose them. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0)
+		    clk_cmd == CMD_CLK_PROPERTIES ||
+		    clk_cmd == CMD_CLK_POSSIBLE_PARENTS ||
+		    clk_cmd == CMD_CLK_NUM_POSSIBLE_PARENTS ||
+		    clk_cmd == CMD_CLK_GET_POSSIBLE_PARENT ||
+#endif
+		    clk_cmd == CMD_CLK_GET_ALL_INFO ||
+		    clk_cmd == CMD_CLK_GET_MAX_CLK_ID ||
+		    clk_cmd == CMD_CLK_GET_FMAX_AT_VMIN)
+			return true;
+
+		/* The protected roots are firmware-owned, always-on clocks. Preparing
+		 * a guest child walks through CMD_CLK_ENABLE on its parent, but enabling
+		 * these roots is a BPMP refcount no-op. Permit that single operation for
+		 * every consumer while continuing to reject disable, rate and parent
+		 * changes below. */
+		if (clk_cmd == CMD_CLK_ENABLE && clk_root_is_protected(clk_id))
+			return true;
+
+		for(i = 0; i < allowed->clocks_size; i++){
 			// bits[23..0] are the clock id
-			if(bpmp_ares.clock[i] == (clock_req->cmd_and_id & 0x0FFF)){
+			if(allowed->clock[i] == clk_id){
 				// A guest may enable/read an allowed clock, but must never
 				// disable, reparent or rerate a host-critical shared root.
-				if(clk_root_is_protected(clock_req->cmd_and_id & 0x0FFF) &&
+				if(clk_root_is_protected(clk_id) &&
 				   (clk_cmd == CMD_CLK_DISABLE ||
 				    clk_cmd == CMD_CLK_SET_RATE ||
 				    clk_cmd == CMD_CLK_SET_PARENT)){
 					deb_warn("Warning, protected clock root %d: command %d denied",
-						clock_req->cmd_and_id & 0x0FFF, clk_cmd);
+						clk_id, clk_cmd);
 					return false;
 				}
 				return true;
 			}
 		}
 
-		// If there is a get info command, allow it no matters the ID
-		if(clk_cmd == CMD_CLK_GET_MAX_CLK_ID ||
-		   clk_cmd == CMD_CLK_GET_ALL_INFO ||
-		   clk_cmd == CMD_CLK_GET_PARENT){
-			return true;
-		}
-
 		deb_warn("Warning, clock not allowed for: %d, with command: %d", 
-			clock_req->cmd_and_id & 0x0FFF, clk_cmd);
+			clk_id, clk_cmd);
 		return false;
 	}
 	else if(msg->mrq == MRQ_PG){
@@ -411,8 +419,8 @@ static bool check_if_allowed(struct tegra_bpmp_message *msg)
 		}
 		pg_req = (struct mrq_pg_request*) msg->tx.data;
 
-		for(i = 0; i < bpmp_ares.pd_size; i++){
-			if(bpmp_ares.pd[i] == pg_req->id){
+		for(i = 0; i < allowed->pd_size; i++){
+			if(allowed->pd[i] == pg_req->id){
 				return true;
 			}
 		}
@@ -489,6 +497,9 @@ static_assert(sizeof(struct bpmp_proxy_wire_message) == 48);
 
 static ssize_t write(struct file *filep, const char __user *buffer, size_t len, loff_t *offset)
 {
+	struct miscdevice *miscdev = filep->private_data;
+	struct bpmp_host_proxy *proxy =
+		container_of(miscdev, struct bpmp_host_proxy, miscdev);
 	struct bpmp_proxy_wire_message wire;
 	struct tegra_bpmp_message message = { 0 };
 	void __user *usertxbuf;
@@ -565,7 +576,7 @@ static ssize_t write(struct file *filep, const char __user *buffer, size_t len, 
 	}
 
 	// Only continue if allowed or BPMP_HOST_ALLOWS_ALL
-	if (!check_if_allowed(&message) && !BPMP_HOST_ALLOWS_ALL) {
+	if (!check_if_allowed(&proxy->allowed, &message) && !BPMP_HOST_ALLOWS_ALL) {
 		ret = -EPERM;
 		goto out;
 	}
