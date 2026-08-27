@@ -36,4 +36,14 @@ runCommand "l4t-csv"
   mkdir -p $out
   dpkg --fsys-tarfile ${debs.${repo}.nvidia-l4t-init.src} | tar -x ./etc/nvidia-container-runtime/host-files-for-container.d
   cp etc/nvidia-container-runtime/host-files-for-container.d/* $out/
+
+  ${lib.optionalString (l4tAtLeast "39") ''
+  # NVIDIA generates these entries at boot in
+  # debs.som.nvidia-l4t-init's /etc/systemd/nv-load-gpu-libs.sh. Check that
+  # script for host libraries
+  # that must also be exposed to containers.
+    echo 'lib, /usr/lib/aarch64-linux-gnu/nvidia/libcuda.so.1.1' >> $out/drivers.csv
+    echo 'lib, /usr/lib/aarch64-linux-gnu/nvidia/libcuda_instrumentation.so' >> $out/drivers.csv
+    echo 'lib, /usr/lib/aarch64-linux-gnu/nvidia/libnvcuvid.so' >> $out/drivers.csv
+  ''}
 ''

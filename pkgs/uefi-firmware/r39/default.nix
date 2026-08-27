@@ -41,7 +41,7 @@ let
     edk2-platforms.sha256 = "sha256-7SGml17A47+wZNn4Z9vZHjDYTAcxIyG6De9vU4U8QR8=";
     edk2-infineon.sha256 = "sha256-47UJfEd4ViTenx5dvy2G75NFSgmcsyIWpN0Lv1QlvA8=";
     edk2-redfish-client.sha256 = "sha256-Tq6dZu90T10FBVMYjYolm2WfAZc/cQe8dNuKXrK3RbE=";
-    edk2-nvidia.sha256 = "sha256-fR7RB1kRnPX1yf6HWliLQhNPBmg8CGaumzPPaUPDQak=";
+    edk2-nvidia.sha256 = "sha256-1qFt5wv5Ay3/rB6JecyKdc3ldHhpdOeNLcdWvsUuK3U=";
     edk2-nvidia-non-osi.sha256 = "sha256-xdIcdgmvFZgF2R8sjDVIrW8w2XLeDhI8kGpoW8gdNgE=";
   };
 
@@ -140,5 +140,3 @@ in
 {
   inherit uefi-firmware jetsonStandaloneMMOptee;
 }
-
-
