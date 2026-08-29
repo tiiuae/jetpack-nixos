@@ -31,6 +31,7 @@ let
     LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x/include
     LINUXINCLUDE += -I$(srctree.hwpm)/include
 
+    obj-m += devfreq/
     obj-m += gpu/host1x-nvhost/
     obj-m += platform/tegra/dce/
     obj-m += platform/tegra/mc-utils/
@@ -287,6 +288,8 @@ in
                     --replace-fail 'NVMAP_CONFIG_SCIIPC := y' 'NVMAP_CONFIG_SCIIPC := n # Not used by the GPU/display guest.'
                   substituteInPlace nvgpu/drivers/gpu/nvgpu/Makefile.linux.configs \
                     --replace-fail 'CONFIG_NVGPU_PCI_IGPU := y' 'CONFIG_NVGPU_PCI_IGPU := n # Platform GPU guest only.'
+                  substituteInPlace nvgpu/drivers/gpu/nvgpu/os/linux/scale.c \
+                    --replace-fail $'#ifdef CONFIG_DEVFREQ_THERMAL\n\t\tcooling = of_devfreq_cooling_register(dev->of_node, devfreq);\n\t\tif (IS_ERR(cooling))\n\t\t\tdev_info(dev, "Failed to register cooling device\\n");\n\t\telse\n\t\t\tl->cooling = cooling;\n#endif' $'#ifdef CONFIG_DEVFREQ_THERMAL\n\t\tif (devfreq != NULL) {\n\t\t\tcooling = of_devfreq_cooling_register(dev->of_node, devfreq);\n\t\t\tif (IS_ERR(cooling))\n\t\t\t\tdev_info(dev, "Failed to register cooling device\\n");\n\t\t\telse\n\t\t\t\tl->cooling = cooling;\n\t\t}\n#endif'
 
                   # R36.5 carries conftests for these API transitions, but its
                   # conftest probes predate Linux 7.1.  Select the known 7.1
