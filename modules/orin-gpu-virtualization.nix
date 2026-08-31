@@ -32,6 +32,7 @@ let
     LINUXINCLUDE += -I$(srctree.hwpm)/include
 
     obj-m += devfreq/
+    obj-m += gpu/host1x-fence/
     obj-m += gpu/host1x-nvhost/
     obj-m += platform/tegra/dce/
     obj-m += platform/tegra/mc-utils/
@@ -271,6 +272,8 @@ in
                   "0011-window-notifier-plain-write.patch"
                   "0024-nvkms-keep-flip-completion-binding.patch"
                   "0025-tegra-fbdev-use-core-allocated-fb-info.patch"
+                  "0026-nvgpu-map-syncpoint-aperture-as-resource.patch"
+                  "0027-nvgpu-honor-ga10b-iommu-bypass.patch"
                 ]
                 ++ lib.optional guestPayload.noSyncpointPatch "${support}/patches/nvidia-oot/gpu-display/0021-nvkms-force-no-syncpt-support.patch";
               postPatch = (old.postPatch or "") + ''
@@ -306,6 +309,11 @@ in
                     --replace-fail '#if defined(NV_IOMMU_MAP_HAS_GFP_ARG) /* Linux v6.3 */' '#if 1 /* Linux 7.1 */'
                   substituteInPlace nvidia-oot/drivers/gpu/host1x-nvhost/nvhost.c \
                     --replace-fail '#if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */' '#if 1 /* Linux 7.1 */'
+                  substituteInPlace nvidia-oot/drivers/gpu/host1x-fence/dev.c \
+                    --replace-fail '#if defined(NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG) /* Linux v6.2 */' '#if 1 /* Linux 7.1 */' \
+                    --replace-fail '#if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */' '#if 1 /* Linux 7.1 */' \
+                    --replace-fail 'spin_lock(pfd_fence->fence->lock);' 'spin_lock(dma_fence_spinlock(pfd_fence->fence));' \
+                    --replace-fail 'spin_unlock(pfd_fence->fence->lock);' 'spin_unlock(dma_fence_spinlock(pfd_fence->fence));'
                   substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-ipc.c \
                     --replace-fail '#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */' '#if 1 /* Linux 7.1 */'
                   substituteInPlace nvidia-oot/drivers/platform/tegra/dce/include/dce-ipc.h \

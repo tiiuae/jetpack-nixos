@@ -1,0 +1,130 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: vadik likholetov <vadikas@gmail.com>
+Date: Sun, 30 Aug 2026 01:15:00 +0300
+Subject: [PATCH] nvgpu: Map syncpoint aperture as an MMIO resource
+
+The host1x syncpoint aperture is device memory, not system RAM.  Building a
+scatterlist with phys_to_page() for that aperture relies on an invalid struct
+page and faults in Linux 7.1's iommu_dma_map_sg() P2P-DMA classification.
+
+Use the DMA resource API, which maps a physical MMIO resource through the
+device's IOMMU without manufacturing a struct page.  Track successful mapping
+explicitly so error removal and normal driver removal only unmap an aperture
+that was actually mapped.
+
+Signed-off-by: vadik likholetov <vadikas@gmail.com>
+---
+ nvgpu/drivers/gpu/nvgpu/include/nvgpu/gk20a.h    |  1 +
+ .../gpu/nvgpu/os/linux/nvhost_common.c           | 54 ++++++----------
+ 2 files changed, 18 insertions(+), 38 deletions(-)
+
+diff --git a/nvgpu/drivers/gpu/nvgpu/include/nvgpu/gk20a.h b/nvgpu/drivers/gpu/nvgpu/include/nvgpu/gk20a.h
+--- a/nvgpu/drivers/gpu/nvgpu/include/nvgpu/gk20a.h
++++ b/nvgpu/drivers/gpu/nvgpu/include/nvgpu/gk20a.h
+@@ -904,7 +904,9 @@ struct gk20a {
+ #if defined(CONFIG_TEGRA_GK20A_NVHOST)
+ 	/** Full syncpoint aperture base memory address. */
+ 	u64		syncpt_unit_base;
++	/** True while the syncpoint aperture has a DMA resource mapping. */
++	bool		syncpt_unit_mapped;
+ 	/** Full syncpoint aperture size. */
+ 	size_t		syncpt_unit_size;
+ 	/** Each syncpoint aperture size */
+ 	u32		syncpt_size;
+diff --git a/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c b/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
+--- a/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
++++ b/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
+@@ -16,14 +16,13 @@
+ 
+ void nvgpu_free_nvhost_dev(struct gk20a *g)
+ {
+-	if (nvgpu_iommuable(g) && !nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK)) {
++	if (g->syncpt_unit_mapped) {
+ 		struct device *dev = dev_from_gk20a(g);
+-		struct nvgpu_mem *mem = &g->syncpt_mem;
+ 
+-		dma_unmap_sg_attrs(dev, mem->priv.sgt->sgl, 1,
+-				DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
+-		sg_free_table(mem->priv.sgt);
+-		nvgpu_kfree(g, mem->priv.sgt);
++		dma_unmap_resource(dev, g->syncpt_unit_base,
++				g->syncpt_unit_size, DMA_BIDIRECTIONAL,
++				DMA_ATTR_SKIP_CPU_SYNC);
++		g->syncpt_unit_mapped = false;
+ 	}
+ 	nvgpu_kfree(g, g->nvhost);
+ }
+@@ -58,6 +58,5 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+ {
+ 	int err = 0;
+-	struct nvgpu_mem *mem = &g->syncpt_mem;
+ 
+ 	if (!nvgpu_has_syncpoints(g))
+ 		return -ENOSYS;
+@@ -80,41 +79,24 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+ 	}
+ 
+ 	/*
+-	 * If IOMMU is enabled, create iova for syncpt region. This iova is then
+-	 * used to create nvgpu_mem for syncpt by nvgpu_mem_create_from_phys.
+-	 * For entire syncpt shim read-only mapping full iova range is used and
+-	 * for a given syncpt read-write mapping only a part of iova range is
+-	 * used. Instead of creating another variable to store the sgt,
+-	 * g->syncpt_mem's priv field is used which later on is needed for
+-	 * freeing the mapping in deinit.
++	 * If IOMMU is enabled, create an IOVA for the syncpoint MMIO region.
++	 * The resulting IOVA is used to create nvgpu_mem for the syncpoint
++	 * mappings later in GPU initialization.
+ 	 */
+ 	if (nvgpu_iommuable(g) && !nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK)) {
+ 		struct device *dev = dev_from_gk20a(g);
+-		struct scatterlist *sg;
+-
+-		mem->priv.sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
+-		if (!mem->priv.sgt) {
+-			err = -ENOMEM;
+-			goto fail_sync;
+-		}
+-
+-		err = sg_alloc_table(mem->priv.sgt, 1, GFP_KERNEL);
+-		if (err) {
+-			err = -ENOMEM;
+-			goto fail_kfree;
+-		}
+-		sg = mem->priv.sgt->sgl;
+-		sg_set_page(sg, phys_to_page(g->syncpt_unit_base),
+-				g->syncpt_unit_size, 0);
+-		err = dma_map_sg_attrs(dev, sg, 1,
+-				DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
+-		/* dma_map_sg_attrs returns 0 on errors */
+-		if (err == 0) {
++		dma_addr_t iova;
++
++		iova = dma_map_resource(dev, g->syncpt_unit_base,
++				g->syncpt_unit_size, DMA_BIDIRECTIONAL,
++				DMA_ATTR_SKIP_CPU_SYNC);
++		if (dma_mapping_error(dev, iova)) {
+ 			nvgpu_err(g, "iova creation for syncpoint failed");
+ 			err = -ENOMEM;
+-			goto fail_sgt;
++			goto fail_sync;
+ 		}
+-		g->syncpt_unit_base = sg_dma_address(sg);
++		g->syncpt_unit_base = iova;
++		g->syncpt_unit_mapped = true;
+ 	}
+ 
+ 	g->syncpt_size =
+@@ -123,10 +105,6 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+ 			g->syncpt_unit_base, g->syncpt_unit_size,
+ 			g->syncpt_size);
+ 	return 0;
+-fail_sgt:
+-	sg_free_table(mem->priv.sgt);
+-fail_kfree:
+-	nvgpu_kfree(g, mem->priv.sgt);
+ fail_sync:
+ 	nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, false);
+ 	return err;
+-- 
+2.51.0
