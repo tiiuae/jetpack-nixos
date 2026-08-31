@@ -12,6 +12,11 @@
             dce_iso_anchor {
                 compatible = "nvidia,dce-iso-anchor";
                 iommus = <&smmu_iso 1>;
+                // pKVM otherwise assigns host devices to its identity domain.
+                // DCE emits carveout aliases above 4 GiB, so this anchor needs
+                // a translated domain with an aperture that covers them.
+                pkvm,paging-domain;
+                pkvm,iova-address-bits = <40>;
                 // iommus alone only creates SID 1's translating domain -- it
                 // does NOT retag the physical scanout readers. The MC SID
                 // overrides for NVDISPLAYR (0x92, MC+0x490) and NVDISPLAYR1
@@ -35,6 +40,8 @@
             dce_niso_anchor {
                 compatible = "nvidia,dce-iso-anchor";
                 iommus = <&smmu_niso0 7>;
+                pkvm,paging-domain;
+                pkvm,iova-address-bits = <40>;
                 dma-coherent;
                 status = "okay";
             };

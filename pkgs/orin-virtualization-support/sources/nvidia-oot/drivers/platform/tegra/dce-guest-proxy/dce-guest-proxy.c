@@ -57,7 +57,7 @@ MODULE_VERSION("0.1");
 #define DCE_MAX_PAYLOAD 0x1000  /* max tx/rx payload (== TX_BUF/RX_BUF slot) */
 
 static void __iomem *mem_iova;
-static void *evt_payload_va;
+static void __iomem *evt_payload_iova;
 static int dce_evt_irq = -1;
 static u32 dce_evt_last_seq;
 
@@ -124,7 +124,7 @@ static irqreturn_t dce_evt_irq_thread(int irq, void *arg)
 	size = readl(mem_iova + EVT_SIZ);
 	if (size > EVT_MAX)
 		size = EVT_MAX;
-	memcpy(evbuf, evt_payload_va, size);
+	memcpy_fromio(evbuf, evt_payload_iova, size);
 
 	/* A full FIFO leaves the SPI asserted for a lossless retry. */
 	ret = tegra_dce_client_ipc_inject(iface, size, evbuf);
@@ -153,15 +153,17 @@ static int dce_guest_proxy_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	/* Match QEMU's cacheable RAM alias for the event payload. */
+	/* The event payload is emulated MMIO. Keep it out of a KVM memslot so
+	 * protected-guest ownership cannot make the backing inaccessible to the
+	 * VMM while it publishes an asynchronous event. */
 	mem_iova = ioremap(vpa, EVT_BUF);
 	if (!mem_iova) {
 		dev_err(&pdev->dev, "ioremap(0x%llX) failed\n", vpa);
 		return -ENOMEM;
 	}
-	evt_payload_va = memremap(vpa + EVT_BUF, EVT_MAX, MEMREMAP_WB);
-	if (!evt_payload_va) {
-		dev_err(&pdev->dev, "memremap(0x%llX) failed\n",
+	evt_payload_iova = ioremap(vpa + EVT_BUF, EVT_MAX);
+	if (!evt_payload_iova) {
+		dev_err(&pdev->dev, "ioremap(0x%llX) failed\n",
 			vpa + EVT_BUF);
 		iounmap(mem_iova);
 		mem_iova = NULL;
@@ -169,8 +171,8 @@ static int dce_guest_proxy_probe(struct platform_device *pdev)
 	}
 
 	dev_info(&pdev->dev,
-		 "dce-virtual-pa: 0x%llX control=%p payload-wb=%p\n",
-		 vpa, mem_iova, evt_payload_va);
+		 "dce-virtual-pa: 0x%llX control=%p payload-mmio=%p\n",
+		 vpa, mem_iova, evt_payload_iova);
 
 	/* Ordered worker for the no-drop event FIFO. Start it BEFORE publishing
 	 * the send redirect: a start failure must not leave a dangling
@@ -178,8 +180,8 @@ static int dce_guest_proxy_probe(struct platform_device *pdev)
 	ret = tegra_dce_virt_event_start();
 	if (ret) {
 		dev_err(&pdev->dev, "virt-event wq start failed: %d\n", ret);
-		memunmap(evt_payload_va);
-		evt_payload_va = NULL;
+		iounmap(evt_payload_iova);
+		evt_payload_iova = NULL;
 		iounmap(mem_iova);
 		mem_iova = NULL;
 		return ret;
@@ -208,8 +210,8 @@ static int dce_guest_proxy_probe(struct platform_device *pdev)
 
 err_event_stop:
 	tegra_dce_virt_event_stop();
-	memunmap(evt_payload_va);
-	evt_payload_va = NULL;
+	iounmap(evt_payload_iova);
+	evt_payload_iova = NULL;
 	iounmap(mem_iova);
 	mem_iova = NULL;
 	return ret;
@@ -225,9 +227,9 @@ static void dce_guest_proxy_remove(struct platform_device *pdev)
 	}
 	tegra_dce_virt_event_stop();		/* flush + destroy the wq */
 	tegra_dce_ipc_send_redirect = NULL;
-	if (evt_payload_va) {
-		memunmap(evt_payload_va);
-		evt_payload_va = NULL;
+	if (evt_payload_iova) {
+		iounmap(evt_payload_iova);
+		evt_payload_iova = NULL;
 	}
 	if (mem_iova) {
 		iounmap(mem_iova);		/* only after the wq is gone */

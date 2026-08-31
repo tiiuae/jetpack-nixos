@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: vadik likholetov <vadikas@gmail.com>
+Date: Sun, 30 Aug 2026 19:15:00 +0300
+Subject: [PATCH] nvgpu: Honor GA10B IOMMU bypass in guests
+
+GA10B reaches system memory over NVLink and explicitly bypasses the Tegra
+SMMU.  On bare metal the GPU has no IOMMU firmware specifier, so nvgpu uses
+physical scatterlists.  A virtual IOMMU in a passthrough guest makes
+nvgpu_iommuable() true, however, and causes GPU PTEs and the syncpoint aperture
+to contain IOVAs that the NVLink path sends untranslated to the memory
+controller.
+
+Set the bypass and physical-scatterlist flags before the platform probe maps
+the syncpoint resource, retain them when GA10B initializes its characteristics,
+and do not create an IOMMU mapping for syncpoint MMIO on a bypassing GPU.  The
+Orin GPUVM provides its GPU memory and syncpoint apertures as identity-backed
+guest physical resources.
+
+Signed-off-by: vadik likholetov <vadikas@gmail.com>
+---
+ nvgpu/drivers/gpu/nvgpu/hal/init/hal_ga10b.c      | 5 +++++
+ nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c | 2 +-
+ .../gpu/nvgpu/os/linux/platform_ga10b_tegra.c     | 7 +++++++
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/nvgpu/drivers/gpu/nvgpu/hal/init/hal_ga10b.c b/nvgpu/drivers/gpu/nvgpu/hal/init/hal_ga10b.c
+--- a/nvgpu/drivers/gpu/nvgpu/hal/init/hal_ga10b.c
++++ b/nvgpu/drivers/gpu/nvgpu/hal/init/hal_ga10b.c
+@@ -2066,6 +2066,11 @@ int ga10b_init_hal(struct gk20a *g)
+ 	 * memory.
+ 	 */
+ 	nvgpu_set_enabled(g, NVGPU_MM_BYPASSES_IOMMU, true);
++	/*
++	 * A guest may still expose an IOMMU domain for device assignment.  The
++	 * NVLink memory path cannot consume those DMA addresses.
++	 */
++	nvgpu_set_enabled(g, NVGPU_MM_USE_PHYSICAL_SG, true);
+ 
+ 	/*
+ 	 * ecc scrub init can get called before
+diff --git a/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c b/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
+--- a/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
++++ b/nvgpu/drivers/gpu/nvgpu/os/linux/nvhost_common.c
+@@ -82,7 +82,7 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+	 * The resulting IOVA is used to create nvgpu_mem for the syncpoint
+	 * mappings later in GPU initialization.
+ 	 */
+-	if (nvgpu_iommuable(g) && !nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK)) {
++	if (nvgpu_iommuable(g) && !nvgpu_is_enabled(g, NVGPU_MM_BYPASSES_IOMMU)) {
+ 		struct device *dev = dev_from_gk20a(g);
+		dma_addr_t iova;
+
+diff --git a/nvgpu/drivers/gpu/nvgpu/os/linux/platform_ga10b_tegra.c b/nvgpu/drivers/gpu/nvgpu/os/linux/platform_ga10b_tegra.c
+--- a/nvgpu/drivers/gpu/nvgpu/os/linux/platform_ga10b_tegra.c
++++ b/nvgpu/drivers/gpu/nvgpu/os/linux/platform_ga10b_tegra.c
+@@ -277,6 +277,13 @@ static int ga10b_tegra_probe(struct device *dev)
+ #ifdef CONFIG_OF
+ 	struct device_node *of_chosen;
+ #endif
++	/*
++	 * Syncpoint setup runs before GPU characteristics are initialized.  Set
++	 * GA10B's NVLink memory-path flags now so syncpoint setup does not create
++	 * an IOMMU IOVA.
++	 */
++	nvgpu_set_enabled(g, NVGPU_MM_BYPASSES_IOMMU, true);
++	nvgpu_set_enabled(g, NVGPU_MM_USE_PHYSICAL_SG, true);
+ 
+ 	err = nvgpu_nvhost_syncpt_init(platform->g);
+ 	if (err) {
+-- 
+2.51.0

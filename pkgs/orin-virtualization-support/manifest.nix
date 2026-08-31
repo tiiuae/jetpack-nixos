@@ -208,6 +208,7 @@ let
         lib.optionals host1x [
           "nvmap"
           "host1x"
+          "host1x-fence"
           "nvhost"
           "nvgpu"
         ]

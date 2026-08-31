@@ -1,0 +1,42 @@
+From: Vadik Likholetov <vadikas@gmail.com>
+Subject: [PATCH] gpu: host1x: export syncpoint fence identity
+
+The NVIDIA R36.5 nvgpu guest driver translates host1x DMA fences into
+syncpoint IDs and thresholds before submitting work.  Keep Linux 7.1's
+host1x implementation as the single provider and expose the small identity
+helper carried by NVIDIA's downstream host1x driver.
+
+Signed-off-by: Vadik Likholetov <vadikas@gmail.com>
+---
+ drivers/gpu/host1x/fence.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/gpu/host1x/fence.c b/drivers/gpu/host1x/fence.c
+index 17ef672fe6f9..29d469d9b205 100644
+--- a/drivers/gpu/host1x/fence.c
++++ b/drivers/gpu/host1x/fence.c
+@@ -144,6 +144,22 @@ struct dma_fence *host1x_fence_create(struct host1x_syncpt *sp, u32 threshold,
+ }
+ EXPORT_SYMBOL(host1x_fence_create);
+ 
++int host1x_fence_extract(struct dma_fence *fence, u32 *id, u32 *threshold)
++{
++	struct host1x_syncpt_fence *f;
++
++	if (fence->ops != &host1x_syncpt_fence_ops)
++		return -EINVAL;
++
++	f = container_of(fence, struct host1x_syncpt_fence, base);
++
++	*id = f->sp->id;
++	*threshold = f->threshold;
++
++	return 0;
++}
++EXPORT_SYMBOL(host1x_fence_extract);
++
+ void host1x_fence_cancel(struct dma_fence *f)
+ {
+ 	struct host1x_syncpt_fence *sf = to_host1x_fence(f);
+-- 
+2.51.0
