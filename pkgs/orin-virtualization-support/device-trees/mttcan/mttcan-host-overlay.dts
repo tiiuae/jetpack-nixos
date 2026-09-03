@@ -1,0 +1,49 @@
+// SPDX-FileCopyrightText: 2022-2026 TII (SSRC) and the Ghaf contributors
+// SPDX-License-Identifier: GPL-2.0-only
+
+/dts-v1/;
+/plugin/;
+
+/*
+ * MTTCAN is DMA-less and therefore has no native SMMU stream or IOMMU group.
+ * vfio-platform still requires a group before it will bind.  Attach both
+ * controllers to one otherwise-unused, inert stream ID so they form a group
+ * isolated from the GPU (0x7f) and display (0x7d) passthrough devices.
+ */
+#define GHAF_SID_CANVM 0x7e
+
+/ {
+    overlay-name = "MTTCAN host passthrough";
+    compatible = "nvidia,tegra234";
+
+    fragment@0 {
+        target-path = "/bus@0/mttcan@c310000";
+        __overlay__ {
+            /*
+             * NVIDIA's base DT describes glue-regs as 0x32 bytes, while the
+             * driver performs a 32-bit access at offset 0x30. Native ioremap
+             * hides the two-byte overrun by mapping a page, but VFIO enforces
+             * the exact resource extent and Crosvm rejects that access. Keep
+             * the same three regions and extend glue-regs through 0x33.
+             */
+            reg = <0x0 0x0c310000 0x0 0x144>,
+                  <0x0 0x0c311000 0x0 0x34>,
+                  <0x0 0x0c312000 0x0 0x1000>;
+            iommus = <&smmu_niso0 GHAF_SID_CANVM>;
+            dma-coherent;
+            status = "okay";
+        };
+    };
+
+    fragment@1 {
+        target-path = "/bus@0/mttcan@c320000";
+        __overlay__ {
+            reg = <0x0 0x0c320000 0x0 0x144>,
+                  <0x0 0x0c321000 0x0 0x34>,
+                  <0x0 0x0c322000 0x0 0x1000>;
+            iommus = <&smmu_niso0 GHAF_SID_CANVM>;
+            dma-coherent;
+            status = "okay";
+        };
+    };
+};

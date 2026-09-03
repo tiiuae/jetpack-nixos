@@ -9,6 +9,7 @@ let
   cfg = config.hardware.nvidia-jetpack.virtualization;
   consumers = cfg.bpmpHost.consumers;
   bpmpEnabled = consumers != { };
+  bpmpGuestEnabled = cfg.mgbe0Guest.enable || cfg.mttcanGuest.enable;
   ids = values: lib.concatStringsSep " " (map toString values);
   support = pkgs.nvidia-jetpack.orinVirtualizationSupport.override {
     bpmpAllowAllDomains = cfg.bpmpHost.allowAllDomains;
@@ -29,6 +30,87 @@ let
     subdir-ccflags-y += -Wmissing-prototypes
     obj-m += drivers/platform/tegra/dce/
   '';
+  mttcan = support.passthrough.mttcan;
+  mttcanDevices = map (controller: controller.sysfsName) mttcan.controllers;
+  mttcanModules = config.boot.kernelPackages.nvidia-oot-modules.overrideAttrs (old: {
+    pname = "l4t-mttcan-modules";
+    postPatch = (old.postPatch or "") + ''
+      substituteInPlace Makefile \
+        --replace-fail 'modules: hwpm nvidia-oot nvgpu nvidia-display' 'modules: nvidia-oot' \
+        --replace-fail 'modules_install: hwpm nvidia-oot nvgpu nvidia-display-install' 'modules_install: nvidia-oot' \
+        --replace-fail 'nvidia-oot: conftest hwpm' 'nvidia-oot: conftest' \
+        --replace-fail '$(MAKEFILE_DIR)/hwpm/drivers/tegra/hwpm/Module.symvers' ""
+
+      # NetVM needs only the NVIDIA PPS provider and the native MTTCAN
+      # driver. Avoid compiling unrelated display, GPU, camera, and network
+      # modules against its upstream guest kernel.
+      cp nvidia-oot/Makefile nvidia-oot/Makefile.all
+      cat > nvidia-oot/Makefile <<'EOF'
+      # SPDX-License-Identifier: GPL-2.0-only
+      # SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
+      LINUXINCLUDE += -I$(srctree.nvconftest)
+      LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
+      subdir-ccflags-y += -Werror
+      subdir-ccflags-y += -Wmissing-prototypes
+      ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
+      subdir-ccflags-y += -DCONFIG_TEGRA_VIRTUALIZATION
+      endif
+      ifeq ($(CONFIG_TEGRA_SYSTEM_TYPE_ACK),y)
+      subdir-ccflags-y += -DCONFIG_TEGRA_SYSTEM_TYPE_ACK
+      subdir-ccflags-y += -Wno-sometimes-uninitialized
+      subdir-ccflags-y += -Wno-parentheses-equality
+      subdir-ccflags-y += -Wno-enum-conversion
+      subdir-ccflags-y += -Wno-implicit-fallthrough
+      endif
+      obj-m += drivers/
+      EOF
+
+      cp nvidia-oot/drivers/Makefile nvidia-oot/drivers/Makefile.all
+      cat > nvidia-oot/drivers/Makefile <<'EOF'
+      # SPDX-License-Identifier: GPL-2.0-only
+      # SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+      LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
+      obj-m += net/can/
+      obj-m += nvpps/
+      EOF
+    '';
+  });
+  bindMttcan = pkgs.writeShellApplication {
+    name = "bind-mttcan-vfio-platform";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.iproute2
+    ];
+    text = ''
+      set -eu
+
+      for device in ${lib.escapeShellArgs mttcanDevices}; do
+        device_path="/sys/bus/platform/devices/$device"
+        if [ ! -d "$device_path" ]; then
+          echo "MTTCAN platform device is missing: $device_path" >&2
+          exit 1
+        fi
+
+        if [ -d "$device_path/net" ]; then
+          for interface_path in "$device_path"/net/*; do
+            [ -e "$interface_path" ] || continue
+            ip link set dev "''${interface_path##*/}" down
+          done
+        fi
+
+        current="$(basename "$(readlink -f "$device_path/driver" 2>/dev/null)" || true)"
+        if [ -n "$current" ] && [ "$current" != vfio-platform ]; then
+          echo "$device" > "$device_path/driver/unbind"
+        fi
+
+        echo vfio-platform > "$device_path/driver_override"
+        current="$(basename "$(readlink -f "$device_path/driver" 2>/dev/null)" || true)"
+        if [ "$current" != vfio-platform ]; then
+          echo "$device" > /sys/bus/platform/drivers/vfio-platform/bind
+        fi
+      done
+    '';
+  };
   bpmpHostOverlay = pkgs.writeText "bpmp-host-overlay.dts" ''
     /dts-v1/;
     /plugin/;
@@ -123,6 +205,16 @@ in
         default = pkgs.linuxPackages_6_12;
         defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
         description = "Base kernel package set used by the Orin MGBE0 guest.";
+      };
+    };
+    mttcanHost.enable = lib.mkEnableOption "host support for passing both Orin MTTCAN controllers through to a guest";
+    mttcanGuest = {
+      enable = lib.mkEnableOption "both Orin MTTCAN controllers in a passthrough guest";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay;
+        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay";
+        description = "Kernel package set, including NVIDIA OOT modules, used by the Orin MTTCAN guest.";
       };
     };
   };
@@ -327,17 +419,53 @@ in
       };
     })
 
-    (lib.mkIf cfg.mgbe0Guest.enable {
-      boot.kernelPackages = lib.mkForce cfg.mgbe0Guest.kernelPackages;
+    (lib.mkIf cfg.mttcanHost.enable {
+      assertions = [
+        {
+          assertion = config.hardware.nvidia-jetpack.enable && lib.hasPrefix "orin" config.hardware.nvidia-jetpack.som;
+          message = "Orin MTTCAN host passthrough requires hardware.nvidia-jetpack on an Orin SoM.";
+        }
+      ];
+
+      services.udev.extraRules = ''
+        SUBSYSTEM=="vfio", GROUP="kvm"
+      '';
+
+      hardware.deviceTree = {
+        enable = true;
+        overlays = [
+          {
+            name = "mttcan_host_overlay";
+            # NVIDIA's BSP supplies both upstream-style and `-nv` Orin DTBs,
+            # but only the latter contain the two mttcan nodes.  The root
+            # compatible strings are identical, so compatibility matching
+            # alone would also try this overlay on node-less DTBs and fail.
+            filter = "-nv";
+            dtsFile = "${support}/device-trees/mttcan/mttcan-host-overlay.dts";
+          }
+        ];
+      };
+
+      systemd.services.bindMttcan = {
+        description = "Bind both Orin MTTCAN controllers to the vfio-platform driver";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = lib.getExe bindMttcan;
+        };
+      };
+    })
+
+    (lib.mkIf bpmpGuestEnabled {
+      boot.kernelPackages = lib.mkForce (
+        if cfg.mttcanGuest.enable then cfg.mttcanGuest.kernelPackages else cfg.mgbe0Guest.kernelPackages
+      );
       boot.kernelParams = [
         "clk_ignore_unused"
         "pd_ignore_unused"
       ];
       boot.kernelPatches = [
-        {
-          name = "dwmac-tegra fixed stream id";
-          patch = "${support}/patches/linux/0001-dwmac-tegra-fixed-stream-id.patch";
-        }
         {
           name = "BPMP virtualization proxy drivers";
           patch = "${support}/patches/linux/bpmp-sources.patch";
@@ -366,10 +494,45 @@ in
             CLK_TEGRA_BPMP = yes;
             RESET_TEGRA_BPMP = yes;
             PM_GENERIC_DOMAINS = yes;
+          };
+        }
+      ];
+    })
+
+    (lib.mkIf cfg.mgbe0Guest.enable {
+      boot.kernelPatches = [
+        {
+          name = "dwmac-tegra fixed stream id";
+          patch = "${support}/patches/linux/0001-dwmac-tegra-fixed-stream-id.patch";
+        }
+        {
+          name = "MGBE0 guest kernel configuration";
+          patch = null;
+          structuredExtraConfig = with lib.kernel; {
             STMMAC_ETH = yes;
             STMMAC_PLATFORM = yes;
             DWMAC_TEGRA = yes;
             AQUANTIA_PHY = yes;
+          };
+        }
+      ];
+    })
+
+    (lib.mkIf cfg.mttcanGuest.enable {
+      boot.extraModulePackages = [ mttcanModules ];
+      boot.kernelModules = [
+        "nvpps"
+        "mttcan"
+      ];
+      boot.kernelPatches = [
+        {
+          name = "MTTCAN guest kernel configuration";
+          patch = null;
+          structuredExtraConfig = with lib.kernel; {
+            CAN = yes;
+            CAN_DEV = module;
+            CAN_RAW = module;
+            PTP_1588_CLOCK = module;
           };
         }
       ];
