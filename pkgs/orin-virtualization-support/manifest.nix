@@ -107,6 +107,40 @@ let
       crosvmOverlayPath = "/run/mgbe0-net-vm.dtbo";
     };
 
+    mttcan = {
+      compatible = "nvidia,tegra194-mttcan";
+      controllers = [
+        {
+          interfaceName = "can0";
+          sysfsName = "c310000.mttcan";
+          nodeName = "mttcan@c310000";
+          nodePath = "/bus@0/mttcan@c310000";
+          dtSymbol = "mttcan0";
+          clocks = [
+            284 # TEGRA234_CLK_CAN1_CORE
+            10 # TEGRA234_CLK_CAN1_HOST
+            9 # TEGRA234_CLK_CAN1
+            94 # TEGRA234_CLK_PLLAON
+          ];
+          resets = [ 4 ]; # TEGRA234_RESET_CAN1
+        }
+        {
+          interfaceName = "can1";
+          sysfsName = "c320000.mttcan";
+          nodeName = "mttcan@c320000";
+          nodePath = "/bus@0/mttcan@c320000";
+          dtSymbol = "mttcan1";
+          clocks = [
+            285 # TEGRA234_CLK_CAN2_CORE
+            12 # TEGRA234_CLK_CAN2_HOST
+            11 # TEGRA234_CLK_CAN2
+            94 # TEGRA234_CLK_PLLAON
+          ];
+          resets = [ 5 ]; # TEGRA234_RESET_CAN2
+        }
+      ];
+    };
+
     displayCardPath = "/dev/dri/by-path/platform-66200000.display-card";
   };
 
