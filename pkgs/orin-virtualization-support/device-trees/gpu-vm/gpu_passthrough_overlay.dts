@@ -15,8 +15,9 @@
 
 /*
  * StreamID for the disp-vm-owned wrapper nodes. Disjoint SMMU group from the
- * GPU: 0x7d is unassigned on T234 (SIDs jump 0x72 -> 0x7f in tegra234-mc.h) and
- * != TEGRA234_SID_PASSTHROUGH (0x7f), so gpu-vm and disp-vm never share a stream.
+ * 0x7d and 0x7e are unassigned on T234 (SIDs jump 0x72 -> 0x7f in
+ * tegra234-mc.h).  Display uses 0x7d, CAN uses 0x7e, and GPU uses
+ * TEGRA234_SID_PASSTHROUGH (0x7f), so the VMs never share a stream.
  */
 #define GHAF_SID_DISPVM 0x7d
 

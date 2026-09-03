@@ -289,6 +289,7 @@ static ssize_t read(struct file *filep, char __user *buffer, size_t len, loff_t 
  * commands on these ids are denied in check_if_allowed().
  */
 static const uint32_t protected_clk_roots[] = {
+	94,  /* TEGRA234_CLK_PLLAON: shared CAN parent */
 	14,  /* TEGRA234_CLK_CLK_M */
 	102, /* TEGRA234_CLK_PLLP_OUT0 */
 	103, /* TEGRA234_CLK_UTMIP_PLL: parent of mgbe0_app, also feeds host USB */
