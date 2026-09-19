@@ -374,11 +374,46 @@ in
           name = "fTPM_tee";
           patch = null;
           structuredExtraConfig = with lib.kernel; {
+            EXPERT = yes;
+            # Avoid constant polling of the single-lane fTPM trusted application.
+            HW_RANDOM_TPM = no;
             TCG_TPM = module;
             TCG_FTPM_TEE = module;
           };
           features.fTPM_tee = true;
-        }];
+        }] ++ lib.optionals (config.hardware.nvidia-jetpack.kernel.version == "upstream-6-6") [
+          # Route EFI variables through Linux's OP-TEE client. Firmware runtime
+          # calls cannot deliver the notifications needed when fTPM holds a TA lock.
+          {
+            name = "efi-expose-generic-ops";
+            patch = pkgs.fetchurl {
+              url = "https://github.com/torvalds/linux/commit/6bb3703aa52c9b5bb9716cbeae7350247b675209.patch";
+              hash = "sha256-/986ACY8WfZxW05bWF+LtxfsckBR41nC+x/mBKYmhOI=";
+            };
+          }
+          {
+            name = "efi-access-denied-status";
+            patch = pkgs.fetchurl {
+              url = "https://github.com/torvalds/linux/commit/1f71f37fbbd065b3326d9b7d8bb5ae688cd653d0.patch";
+              hash = "sha256-aZcuVxkHU0M2rZrcfqirfVgr6XDVB9MCQyNNcshu/uQ=";
+            };
+          }
+          {
+            name = "efi-tee-variable-driver";
+            patch = pkgs.fetchurl {
+              url = "https://github.com/torvalds/linux/commit/c44b6be62e8dd4ee0a308c36a70620613e6fc55f.patch";
+              hash = "sha256-K2osk2IZ4pi2FlyP0AHd44g4muRaTgHGDTupHNqc/Ro=";
+            };
+            structuredExtraConfig.TEE_STMM_EFI = lib.kernel.yes;
+          }
+          {
+            name = "efi-tee-contiguous-buffer";
+            patch = pkgs.fetchurl {
+              url = "https://github.com/torvalds/linux/commit/c5e81e672699e0c5557b2b755cc8f7a69aa92bff.patch";
+              hash = "sha256-SWYxaZAAFl0EN4YihvhoteFxXnF74l/5GbZd2tYu+eU=";
+            };
+          }
+        ];
 
         systemd.services.ftpm-driver = {
           description = "Load fTPM driver after TEE supplicant";
