@@ -52,7 +52,7 @@ controller's postPatch, matching dce-host-proxy.
 +	for (ch_type = 0; ch_type < DCE_IPC_CH_KMD_TYPE_MAX; ch_type++) {
 +		struct dce_ipc_channel *ch = &ivc_channels[ch_type];
 +
-+		ret = dce_mutex_init(&ch->lock);
++		ret = dce_os_mutex_init(&ch->lock);
 +		if (ret)
 +			return ret;
 +		ch->d = d;
@@ -61,7 +61,7 @@ controller's postPatch, matching dce-host-proxy.
 +
 +	d->boot_status |= DCE_FW_BOOT_DONE;
 +	dce_set_boot_complete(d, true);
-+	dce_cond_broadcast_interruptible(&d->dce_bootstrap_done);
++	dce_os_cond_broadcast_interruptible(&d->dce_bootstrap_done);
 +
 +	return 0;
 +}
@@ -85,20 +85,18 @@ controller's postPatch, matching dce-host-proxy.
  	if (ret) {
 --- a/drivers/platform/tegra/dce/dce-init-deinit.c	2026-07-11 22:07:51.629617539 +0300
 +++ b/drivers/platform/tegra/dce/dce-init-deinit.c	2026-07-11 22:08:20.088663893 +0300
-@@ -53,7 +53,13 @@
- 		goto err_fsm_init;
- 	}
- 
+@@ -15,6 +15,11 @@ void dce_driver_start(struct tegra_dce *d)
+  */
+ void dce_driver_start(struct tegra_dce *d)
+ {
 -	dce_fsm_start(d);
 +	/*
-+	 * Virtual DCE (guest): no local R5 to bootstrap. dce_fsm_start() kicks
-+	 * the mailbox/IVC bootstrap handshake, which must be skipped; readiness
-+	 * is asserted directly by tegra_dce_guest_ready() from probe.
++	 * Virtual DCE (guest): no local R5 to bootstrap. Readiness is asserted
++	 * directly by tegra_dce_guest_ready() from probe.
 +	 */
 +	if (!dce_vpa)
 +		dce_fsm_start(d);
- 
- 	return ret;
+ }
  
 --- a/drivers/platform/tegra/dce/dce-module.c	2026-07-11 22:07:51.632688215 +0300
 +++ b/drivers/platform/tegra/dce/dce-module.c	2026-07-11 22:08:40.802565498 +0300
@@ -178,7 +176,7 @@ controller's postPatch, matching dce-host-proxy.
 +		 */
 +		err = tegra_dce_guest_ready(d);
 +		if (err) {
-+			dce_err(d, "DCE guest ready failed");
++			dce_os_err(d, "DCE guest ready failed");
 +			goto err_driver_init;
 +		}
 +	} else {

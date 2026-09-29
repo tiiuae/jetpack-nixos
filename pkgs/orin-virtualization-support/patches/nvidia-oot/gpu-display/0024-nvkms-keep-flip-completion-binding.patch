@@ -1,5 +1,5 @@
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-evo.c	2026-08-04 22:52:39.953301893 +0300
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-evo.c	2026-08-05 13:19:42.145888197 +0300
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo.c	2026-08-04 22:52:39.953301893 +0300
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo.c	2026-08-05 13:19:42.145888197 +0300
 @@ -4152,8 +4152,12 @@
              nvRmApiFree(nvEvoGlobal.clientHandle,
                          pChannel->pb.channel_handle,

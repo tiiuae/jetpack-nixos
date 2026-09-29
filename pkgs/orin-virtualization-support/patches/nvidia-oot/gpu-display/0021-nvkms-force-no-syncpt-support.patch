@@ -6,9 +6,9 @@ pDevEvo->supportsSyncpts must be false or NVKMS's mandatory per-window
 post-syncpoint allocation fails. Force the no-syncpt path so the software
 compositor drives display with CPU buffers and no explicit fences.
 ---
-diff --git a/nvdisplay/kernel-open/nvidia-modeset/nvidia-modeset-linux.c b/nvdisplay/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
---- a/nvdisplay/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
-+++ b/nvdisplay/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
+diff --git a/unifiedgpudisp/kernel-open/nvidia-modeset/nvidia-modeset-linux.c b/unifiedgpudisp/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
+--- a/unifiedgpudisp/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
++++ b/unifiedgpudisp/kernel-open/nvidia-modeset/nvidia-modeset-linux.c
 @@ -101,6 +101,8 @@
  
  NvBool nvkms_kernel_supports_syncpts(void)

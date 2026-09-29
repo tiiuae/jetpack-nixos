@@ -13,9 +13,9 @@ that same deferred work once, right after the hotplug callback is armed.
 Spurious pulses are normal on native (handler no-ops on no change), so this is
 unconditional.
 ---
-diff --git a/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c b/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
+diff --git a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
 @@ -1786,6 +1786,16 @@
                          "Failed to register display hotplug "
                          "handler: 0x%x\n", ret);

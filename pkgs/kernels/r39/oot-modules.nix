@@ -24,7 +24,11 @@ let
         ./0001-Fix-conftest-use-with-gcc15.patch
         ./0001-crypto-tegra-Disable-softirqs-before-finalizing-requ.patch
         ./0001-Lower-priority-of-tegra-se-crypto.patch
+        ./0001-realtek-monitor-channel-6.12.111.patch
       ];
+      postPatch = lib.optionalString (lib.versionAtLeast kernel.version "6.6") ''
+        sed -i '/^export NV_OOT_IVC_EXT_SKIP_BUILD=y$/d; /^export NV_OOT_TEGRA_HV_SKIP_BUILD=y$/d' configs/Makefile.config.noble
+      '';
     };
     nvethernetrm = applyPatches {
       name = "nvethernetrm";

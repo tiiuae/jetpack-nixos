@@ -50,8 +50,8 @@ index b0ae8c8..463f4f7 100644
  	bool disable_l3_alloc = false;
  
 +	// TODO: address from DTB
-+	nvgpu_info(g, "nvmap_dma_declare_coherent_memory(dev, 0x80000000, 0x80000000, 0x08000000, 0, 0, 0);");
-+	err = nvmap_dma_declare_coherent_memory(dev, 0x80000000, 0x80000000, 0x08000000, 0, 0, 0);
++	nvgpu_info(g, "nvmap_dma_declare_coherent_memory(dev, 0x80000000, 0x80000000, 0x08000000, 0);");
++	err = nvmap_dma_declare_coherent_memory(dev, 0x80000000, 0x80000000, 0x08000000, 0);
 +
 +	if (err != 0) {
 +		nvgpu_err(g, "nvmap_dma_declare_coherent_memory setup failed 2");
@@ -167,9 +167,8 @@ index 9081c1f..22ac583 100644
 +	else
 +		ipa += CMA_VRAM_OFFSET_TO_HOST_PA;
 +
- 	if (platform->phys_addr)
+ 	if ((!nvgpu_iommuable(g)) && (platform->phys_addr))
  		return platform->phys_addr(g, ipa, NULL);
  
 -- 
 2.34.1
-

@@ -1,5 +1,5 @@
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c
 @@ -4325,13 +4325,9 @@
          pSurfaceDesc = &pNIso->pSurfaceEvo->planes[0].surfaceDesc;
          offset = pNIso->offsetInWords / 4;

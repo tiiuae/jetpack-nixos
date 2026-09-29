@@ -281,7 +281,7 @@ static int dce_host_proxy_probe(struct platform_device *pdev)
 
 
 
-static int dce_host_proxy_remove(struct platform_device *pdev)
+static void dce_host_proxy_remove(struct platform_device *pdev)
 {
 	deb_info("removing module.\n");
 
@@ -314,7 +314,6 @@ static int dce_host_proxy_remove(struct platform_device *pdev)
 	class_destroy(dce_host_proxy_class);
 	unregister_chrdev(major_number, DEVICE_NAME);
 	deb_info("Goodbye from the LKM!\n");
-	return 0;
 }
 
 static int open(struct inode *inodep, struct file *filep)
