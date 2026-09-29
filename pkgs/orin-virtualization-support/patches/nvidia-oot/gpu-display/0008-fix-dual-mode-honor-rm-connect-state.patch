@@ -16,10 +16,9 @@ says the DP displayId is not connected, don't let the DP-lib HPD guess override
 that, so detection falls through to the partner. A real DP sink reports
 connected on both, so native DP is unaffected.
 ---
-diff --git a/nvdisplay/src/nvidia-modeset/src/nvkms-dpy.c b/nvdisplay/src/nvidia-modeset/src/nvkms-dpy.c
-index c94a9cd..0aec8e3 100644
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-dpy.c
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-dpy.c
+diff --git a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-dpy.c b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-dpy.c
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-dpy.c
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-dpy.c
 @@ -2873,6 +2873,21 @@ NvBool nvDpyGetDynamicData(
      } else if (nvConnectorUsesDPLib(pConnectorEvo)) {
          connectedList = nvDPLibDpyIsConnected(pDpyEvo) ?

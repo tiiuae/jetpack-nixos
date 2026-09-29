@@ -6,10 +6,9 @@ the R5 aborts the whole completion write when the awaken cannot be
 delivered -- core channel completions never land and every modeset times
 out. nvkms polls the notifier memory anyway, so plain WRITE suffices.
 ---
-diff --git a/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c b/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c
-index 529ec40..dec6c95 100644
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-evo3.c
+diff --git a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-evo3.c
 @@ -3229,9 +3229,13 @@ void nvEvoSetNotifierC3(NVDevEvoRec *pDevEvo,
       */
      ASSERT_DRF_NUM(C37D, _SET_NOTIFIER_CONTROL, _OFFSET, notifier);

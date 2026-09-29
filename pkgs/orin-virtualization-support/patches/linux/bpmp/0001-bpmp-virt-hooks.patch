@@ -100,10 +100,9 @@ index c3a1dc344961..9f3b362dbd88 100644
  struct tegra_bpmp *tegra_bpmp_get(struct device *dev)
  {
  	struct platform_device *pdev;
-@@ -57,6 +70,7 @@ struct tegra_bpmp *tegra_bpmp_get(struct device *dev)
+@@ -54,5 +67,6 @@ struct tegra_bpmp *tegra_bpmp_get(struct device *dev)
+ 	}
  
- put:
- 	of_node_put(np);
 +	tegra_bpmp_host_device = bpmp;
  	return bpmp;
  }

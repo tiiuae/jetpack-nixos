@@ -118,6 +118,12 @@ in
         description = "Enable PREEMPT_RT patches";
       };
 
+      kernel.version = mkOption {
+        type = types.enum [ "bsp-default" "upstream-6" ];
+        default = "bsp-default";
+        description = "Kernel version";
+      };
+
 
       flasherPkgs = mkOption {
         type = options.nixpkgs.pkgs.type;

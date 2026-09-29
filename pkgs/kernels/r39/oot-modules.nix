@@ -27,7 +27,11 @@ let
         # Some boards hit QSPI_DMA_TIMEOUT's flat 1s limit on large transfers.
         # Scale the timeout to the transfer's size and negotiated speed.
         ./0002-spi-tegra210-quad-scale-xfer-completion-timeout-to-.patch
+        ./0001-realtek-monitor-channel-6.12.111.patch
       ];
+      postPatch = lib.optionalString (lib.versionAtLeast kernel.version "6.6") ''
+        sed -i '/^export NV_OOT_IVC_EXT_SKIP_BUILD=y$/d; /^export NV_OOT_TEGRA_HV_SKIP_BUILD=y$/d' configs/Makefile.config.noble
+      '';
     };
     nvethernetrm = applyPatches {
       name = "nvethernetrm";

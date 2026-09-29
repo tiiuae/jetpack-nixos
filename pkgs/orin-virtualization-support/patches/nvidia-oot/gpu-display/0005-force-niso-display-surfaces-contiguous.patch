@@ -8,10 +8,9 @@ resolve, so the window channel stalls (nvidia-modeset: waiting for GPU
 progress, NVC67E). Force NISO contiguous so they take the physical
 1:1-carveout path (at->flags.physical) the scanout surface uses.
 ---
-diff --git a/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c b/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
-index fc5fb48..e16f6ec 100644
---- a/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
-+++ b/nvdisplay/src/nvidia-modeset/src/nvkms-rm.c
+diff --git a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
+--- a/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
++++ b/unifiedgpudisp/src/nvidia-modeset/src/nvkms-rm.c
 @@ -2411,6 +2411,20 @@ NvBool nvRmAllocSysmem(NVDevEvoPtr pDevEvo, NvU32 memoryHandle,
                            DRF_DEF(OS32, _ATTR, _PHYSICALITY, _NONCONTIGUOUS) |
                            DRF_DEF(OS32, _ATTR, _FORMAT, _PITCH);

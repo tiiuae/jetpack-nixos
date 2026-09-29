@@ -16,10 +16,9 @@ shared header) -- a drift is a silent DMA-isolation bug.
 
 Replaces the 0006/0007/0019/0022/0023/0025/0029 iteration series.
 ---
-diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/disp/disp_channel.c b/nvdisplay/src/nvidia/src/kernel/gpu/disp/disp_channel.c
-index 9a2afb1..fa29589 100644
---- a/nvdisplay/src/nvidia/src/kernel/gpu/disp/disp_channel.c
-+++ b/nvdisplay/src/nvidia/src/kernel/gpu/disp/disp_channel.c
+diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/disp_channel.c b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/disp_channel.c
+--- a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/disp_channel.c
++++ b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/disp_channel.c
 @@ -771,7 +771,12 @@ kdispSetPushBufferParamsToPhysical_IMPL
              return NV_ERR_GENERIC;
          }
@@ -34,10 +33,9 @@ index 9a2afb1..fa29589 100644
          pushBufferParams.cacheSnoop= pBufferContextDma->CacheSnoop;
          pushBufferParams.valid = NV_TRUE;
      }
-diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c b/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
-index 0bc361d..758eecc 100644
---- a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
-+++ b/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
+diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
+--- a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
++++ b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/arch/v03/disp_inst_mem_0300.c
 @@ -165,9 +165,17 @@ instmemCommitContextDma_v03_00
      instoffset = pContextDma->Instance[gpumgrGetSubDeviceInstanceFromGpu(pGpu)] << 4;
      NV_ASSERT_OR_RETURN(instoffset, NV_ERR_INVALID_OBJECT);
@@ -56,13 +54,12 @@ index 0bc361d..758eecc 100644
 +    FrameAddr = memdescGetPhysAddr(pMemDesc, AT_CPU, 0);
 +    FrameAddr += 0x7f00000000ULL;
 +    Limit = FrameAddr + pContextDma->Limit;
-     kind = memdescGetPteKindForGpu(pMemDesc, pGpu);
- 
-     // Cannot bind a Z surface to display.  Bug 439965.
-diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c b/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
-index 6cc52a4..8d2a5cb 100644
---- a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
-+++ b/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
+     //
+     // Set surface format
+     //
+diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
+--- a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
++++ b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
 @@ -312,7 +312,7 @@ instmemInitMemDesc
                      memdescAlloc(pInstMem->pAllocedInstMemDesc),
                      exit);
