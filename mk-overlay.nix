@@ -150,7 +150,11 @@ makeScope final.newScope (self: {
       nvidia-display-driver = final.callPackage ./pkgs/kernels/r${l4tMajorVersion}/display-driver.nix { inherit (self) gitRepos l4tMajorMinorPatchVersion; };
     };
 
-  kernel = self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { kernelPatches = [ ]; };
+  kernel =
+    if self.l4tAtLeast "39" && (final.kernelVersion or "bsp-default") == "upstream-6" then
+      self.callPackage ./pkgs/kernels/r39/upstream-6.nix { kernelPatches = [ ]; }
+    else
+      self.callPackage ./pkgs/kernels/r${l4tMajorVersion} { kernelPatches = [ ]; };
   kernelPackages = final.linuxPackagesFor self.kernel;
 
   orinVirtualizationSupport = self.callPackage ./pkgs/orin-virtualization-support { };

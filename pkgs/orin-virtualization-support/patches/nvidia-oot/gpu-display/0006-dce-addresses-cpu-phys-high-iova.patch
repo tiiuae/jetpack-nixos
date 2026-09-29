@@ -56,9 +56,9 @@ index 0bc361d..758eecc 100644
 +    FrameAddr = memdescGetPhysAddr(pMemDesc, AT_CPU, 0);
 +    FrameAddr += 0x7f00000000ULL;
 +    Limit = FrameAddr + pContextDma->Limit;
-     kind = memdescGetPteKindForGpu(pMemDesc, pGpu);
- 
-     // Cannot bind a Z surface to display.  Bug 439965.
+     //
+     // Set surface format
+     //
 diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c b/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
 index 6cc52a4..8d2a5cb 100644
 --- a/nvdisplay/src/nvidia/src/kernel/gpu/disp/inst_mem/disp_inst_mem.c
