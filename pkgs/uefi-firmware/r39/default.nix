@@ -36,6 +36,16 @@ let
     edk2 = {
       sha256 = "sha256-3y56DRZwFri5K8S2wpYoACEyHlNJ3KMXAkme8UnIaU0=";
       fetchSubmodules = true;
+      leaveDotGit = true;
+      preFetch = ''
+        export NIX_BUILD_CORES=1
+        export GIT_CONFIG_COUNT=1
+        export GIT_CONFIG_KEY_0=http.version
+        export GIT_CONFIG_VALUE_0=HTTP/1.1
+      '';
+      postFetch = ''
+        find "$out" -name .git -prune -exec rm -rf {} +
+      '';
     };
     edk2-non-osi.sha256 = "sha256-6yuvVvmGn4yaEksbbvGDX1ZcKpdWBKnwaNjLGvgAWyk=";
     edk2-platforms.sha256 = "sha256-7SGml17A47+wZNn4Z9vZHjDYTAcxIyG6De9vU4U8QR8=";
