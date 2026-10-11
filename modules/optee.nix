@@ -416,7 +416,7 @@ in
           ];
           conflicts = [ "shutdown.target" ];
           requires = [ "tee-supplicant.service" ];
-          wantedBy = [ "tpm2.target" ];
+          wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
