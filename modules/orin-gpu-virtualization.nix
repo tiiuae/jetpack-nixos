@@ -243,8 +243,8 @@ in
                   "0020-synthesize-boot-hotplug-long-pulse.patch"
                   "0011-window-notifier-plain-write.patch"
                   "0024-nvkms-keep-flip-completion-binding.patch"
-                  "0025-tegra-fbdev-use-core-allocated-fb-info.patch"
                 ]
+                ++ lib.optional (lib.versionOlder pkgs.nvidia-jetpack.jetpackMajorMinorPatchVersion "7") "${support}/patches/nvidia-oot/gpu-display/0025-tegra-fbdev-use-core-allocated-fb-info.patch"
                 ++ lib.optional guestPayload.noSyncpointPatch "${support}/patches/nvidia-oot/gpu-display/0021-nvkms-force-no-syncpt-support.patch";
               postPatch = (old.postPatch or "") + ''
                 ${lib.optionalString (lib.versionAtLeast prev.kernel.version "7.1") ''
