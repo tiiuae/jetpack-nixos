@@ -199,6 +199,7 @@
       };
 
       checks = forAllSystems ({ pkgs, system, ... }: {
+        orin-virtualization = import ./tests/orin-virtualization.nix { inherit self lib pkgs; };
         formatting = pkgs.stdenv.mkDerivation {
           name = "repo-formatting";
           src = self;
