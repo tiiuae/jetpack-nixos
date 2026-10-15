@@ -83,9 +83,13 @@ let
     edk2-nvidia = applyPatches {
       name = "edk2-nvidia";
       src = fetchedRepos.edk2-nvidia;
+      postPatch = ''
+        cp ${../reserve-dtb-ranges.h} Silicon/NVIDIA/PrePi/reserve-dtb-ranges.h
+      '';
       patches = [
         ./stuart-passthru-compiler-prefix.diff
         ./repeatability.diff
+        ../reserve-dtb-ranges.diff
       ] ++ lib.optionals (!enableFTPM) [
         # UEFI hangs at boot on r38 if it cannot reach a fTPM TA, and
         # upstream BuildGeneral.conf implies DEFAULT_SECURITY_TPM_FIRMWARE.
