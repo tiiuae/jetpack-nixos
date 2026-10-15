@@ -87,6 +87,14 @@ let
     edk2-nvidia = applyPatches {
       name = "edk2-nvidia";
       src = fetchedRepos.edk2-nvidia;
+      postPatch = ''
+        cp ${../reserve-dtb-ranges.h} Silicon/NVIDIA/PrePi/reserve-dtb-ranges.h
+        substituteInPlace Silicon/NVIDIA/PrePi/reserve-dtb-ranges.h \
+          --replace-fail FdtPathOffset fdt_path_offset \
+          --replace-fail FdtNodeCheckCompatible fdt_node_check_compatible \
+          --replace-fail FdtGetProp fdt_getprop \
+          --replace-fail Fdt32ToCpu fdt32_to_cpu
+      '';
 
       patches = [
         # Fix Eqos driver to use correct TX clock name
@@ -98,6 +106,7 @@ let
 
         ./stuart-passthru-compiler-prefix.diff
         ./repeatability.diff
+        ../reserve-dtb-ranges.diff
         ./add-extra-oui-for-mgbe-phy.diff
 
       ] ++ lib.optionals (trustedPublicCertPemFile != null) [

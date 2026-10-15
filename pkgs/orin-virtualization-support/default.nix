@@ -54,6 +54,7 @@ runCommand "orin-virtualization-support"
     mkGuestDtb = import ./builders/mk-guest-dtb.nix { inherit lib; };
     mkCrosvmOverlay = import ./builders/mk-crosvm-overlay.nix { inherit lib; };
     mkMgbe0Overlay = import ./builders/mk-mgbe0-overlay.nix { inherit lib; };
+    mkUefiReservedRanges = import ./builders/mk-uefi-reserved-ranges.nix { inherit lib; };
   };
 }
   ''
