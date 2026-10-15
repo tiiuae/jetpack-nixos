@@ -5,9 +5,9 @@ Subject: [PATCH 3/3] Add support for display passthrough on R39
 
 Provide guest display memory allocation and DRAM parameters for passthrough.
 ---
-diff --git a/unifiedgpudisp/kernel-open/nvidia/nv-vm.c b/unifiedgpudisp/kernel-open/nvidia/nv-vm.c
---- a/unifiedgpudisp/kernel-open/nvidia/nv-vm.c
-+++ b/unifiedgpudisp/kernel-open/nvidia/nv-vm.c
+diff --git a/nvdisplay/kernel-open/nvidia/nv-vm.c b/nvdisplay/kernel-open/nvidia/nv-vm.c
+--- a/nvdisplay/kernel-open/nvidia/nv-vm.c
++++ b/nvdisplay/kernel-open/nvidia/nv-vm.c
 @@ -334,10 +334,10 @@
      nvl = NV_GET_NVL_FROM_NV_STATE(nv);
      dev = nvl->dev;
@@ -47,9 +47,9 @@ diff --git a/unifiedgpudisp/kernel-open/nvidia/nv-vm.c b/unifiedgpudisp/kernel-o
                        (void *)page_ptr->virt_addr, at->dma_handle);
  }
  
-diff --git a/unifiedgpudisp/kernel-open/nvidia/os-interface.c b/unifiedgpudisp/kernel-open/nvidia/os-interface.c
---- a/unifiedgpudisp/kernel-open/nvidia/os-interface.c
-+++ b/unifiedgpudisp/kernel-open/nvidia/os-interface.c
+diff --git a/nvdisplay/kernel-open/nvidia/os-interface.c b/nvdisplay/kernel-open/nvidia/os-interface.c
+--- a/nvdisplay/kernel-open/nvidia/os-interface.c
++++ b/nvdisplay/kernel-open/nvidia/os-interface.c
 @@ -21,6 +21,8 @@
   * DEALINGS IN THE SOFTWARE.
   */
@@ -89,9 +89,9 @@ diff --git a/unifiedgpudisp/kernel-open/nvidia/os-interface.c b/unifiedgpudisp/k
      return NV_TRUE;
  #else
      return NV_FALSE;
-diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/kern_disp.c b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/kern_disp.c
---- a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/kern_disp.c
-+++ b/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/kern_disp.c
+diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/disp/kern_disp.c b/nvdisplay/src/nvidia/src/kernel/gpu/disp/kern_disp.c
+--- a/nvdisplay/src/nvidia/src/kernel/gpu/disp/kern_disp.c
++++ b/nvdisplay/src/nvidia/src/kernel/gpu/disp/kern_disp.c
 @@ -673,6 +673,9 @@
      // but the RmCtrl call still invokes RM boot-time code to collect and
      // process information on its own.
@@ -102,9 +102,9 @@ diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/disp/kern_disp.c b/unified
      NV_ASSERT_OK_OR_RETURN(pRmApi->Control(pRmApi, hClient, hSubdevice,
                             NV2080_CTRL_CMD_INTERNAL_DISPLAY_SET_IMP_INIT_INFO,
                             &params, sizeof(params)));
-diff --git a/unifiedgpudisp/src/nvidia/src/kernel/gpu/gpu.c b/unifiedgpudisp/src/nvidia/src/kernel/gpu/gpu.c
---- a/unifiedgpudisp/src/nvidia/src/kernel/gpu/gpu.c
-+++ b/unifiedgpudisp/src/nvidia/src/kernel/gpu/gpu.c
+diff --git a/nvdisplay/src/nvidia/src/kernel/gpu/gpu.c b/nvdisplay/src/nvidia/src/kernel/gpu/gpu.c
+--- a/nvdisplay/src/nvidia/src/kernel/gpu/gpu.c
++++ b/nvdisplay/src/nvidia/src/kernel/gpu/gpu.c
 @@ -3558,4 +3558,5 @@ gpuStatePostLoad
  
 +    /* DCE RM does not implement vGPU manager configuration. */

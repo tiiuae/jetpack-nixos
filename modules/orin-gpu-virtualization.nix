@@ -238,6 +238,11 @@ in
               else
                 prev.devicetree;
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
+              # Orin uses nvdisplay; JP7 also ships Thor's unified GPU driver
+              # with the same module names.
+              makeFlags = (old.makeFlags or [ ])
+                ++ lib.optional (lib.versionAtLeast pkgs.nvidia-jetpack.jetpackMajorMinorPatchVersion "7")
+                "NVIDIA_DISPLAY_MODULE_TARGETS=nvidia-display";
               patches =
                 (old.patches or [ ])
                 ++ map (name: "${support}/patches/nvidia-oot/gpu-display/${name}") [
