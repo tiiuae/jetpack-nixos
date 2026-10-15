@@ -385,7 +385,10 @@ in
         '';
       in
       {
-        boot.kernelModules = [ "tpm" ];
+        # Route Orin EFI variables through the Linux OP-TEE driver so EFI
+        # and fTPM calls share notification handling during concurrent access.
+        boot.kernelModules = [ "tpm" ]
+          ++ lib.optional (pkgs.nvidia-jetpack.socType == "t234") "tee_stmm_efi";
         boot.initrd.availableKernelModules = [ "tpm" "tpm_ftpm_tee" ];
         # tpm_ftpm_tee must load after tee-supplicant is up.
         boot.blacklistedKernelModules = [ "tpm_ftpm_tee" ];
@@ -396,6 +399,8 @@ in
           structuredExtraConfig = with lib.kernel; {
             TCG_TPM = module;
             TCG_FTPM_TEE = module;
+          } // lib.optionalAttrs (pkgs.nvidia-jetpack.socType == "t234") {
+            TEE_STMM_EFI = module;
           };
           features.fTPM_tee = true;
         }];
@@ -513,7 +518,8 @@ in
       in
       {
         # Force-load optee in initrd so /dev/tee0 appears immediately.
-        boot.initrd.kernelModules = [ "optee" ];
+        boot.initrd.kernelModules = [ "optee" ]
+          ++ lib.optional (pkgs.nvidia-jetpack.socType == "t234") "tee_stmm_efi";
 
         # Default fsParentPath to /boot/OP-TEE/REE-FS when earlyBoot is enabled.
         hardware.nvidia-jetpack.firmware.optee.supplicant.fsParentPath =
