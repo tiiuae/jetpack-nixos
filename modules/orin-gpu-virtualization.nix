@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 TII (SSRC) and the Ghaf contributors
 # SPDX-License-Identifier: Apache-2.0
 { config
+, options
 , lib
 , pkgs
 , ...
@@ -113,6 +114,17 @@ in
           name: payload: lib.nameValuePair (bindServiceName name) (bindService name payload)
         )
         payloads;
+    })
+
+    (lib.optionalAttrs (options.hardware.nvidia-jetpack ? flashScriptOverrides) {
+      # The kernel DTB alone cannot keep the EFI stub's KASLR allocations out
+      # of VM memory. This UEFI-only overlay takes effect after a QSPI reflash.
+      hardware.nvidia-jetpack.flashScriptOverrides.additionalDtbOverlays = lib.mkIf (hostAssignments != { }) [
+        (support.mkUefiReservedRanges {
+          inherit pkgs support;
+          includeDispVmRam = roleEnabled "compute";
+        })
+      ];
     })
 
     (lib.mkIf gpuOwner {
