@@ -87,6 +87,14 @@ in
     (lib.mkIf (hostAssignments != { }) {
       assertions = [
         {
+          assertion = config.hardware.nvidia-jetpack.enable && lib.hasPrefix "orin" config.hardware.nvidia-jetpack.som;
+          message = "Orin GPU/display host passthrough requires hardware.nvidia-jetpack on an Orin SoM.";
+        }
+        {
+          assertion = !cfg.bpmpHost.allowAllDomains;
+          message = "Orin GPU/display passthrough requires closed BPMP allow-lists; hardware.nvidia-jetpack.virtualization.bpmpHost.allowAllDomains must stay false.";
+        }
+        {
           assertion = lib.length claimedDevices == lib.length (lib.unique claimedDevices);
           message = "Orin GPU/display passthrough assignments overlap; every physical resource must have one owner.";
         }
