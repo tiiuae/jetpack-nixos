@@ -60,6 +60,11 @@
 /* host1x + its VIC/NVDEC/NVJPG children + the 64MiB syncpoint shim move as one
  * unit; dropped when the guest does not own the corresponding engine. */
 #ifndef EXP_DROP_HOST1X
+		syncpoint_shim: syncpoint-shim@60000000 {
+			compatible = "nvidia,tegra234-syncpoint-shim";
+			reg = <0x0 0x60000000 0x0 0x04000000>;
+		};
+
 		host1x: host1x@13e00000 {
 			compatible = "nvidia,tegra234-host1x";
 			reg = <0x0 0x13e00000 0x0 0x10000>,
@@ -67,6 +72,8 @@
 			      <0x0 0x13e40000 0x0 0x10000>,
 			      <0x0 0x13ef0000 0x0 0x60000>;
 			reg-names = "common", "hypervisor", "vm", "actmon";
+			/* JP7 queries the aperture through host1x instead of fixed constants. */
+			nvidia,syncpoint-shim = <&syncpoint_shim>;
 
 			clocks = <&bpmp TEGRA234_CLK_HOST1X>,
 				 <&bpmp TEGRA234_CLK_ACTMON>;
