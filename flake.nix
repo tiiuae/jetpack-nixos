@@ -201,6 +201,7 @@
       checks = forAllSystems ({ pkgs, system, ... }: {
         orin-virtualization = import ./tests/orin-virtualization.nix { inherit self lib pkgs; };
         uefi-reserved-ranges = import ./tests/uefi-reserved-ranges.nix { inherit lib pkgs; };
+        nvme-flash-layout = import ./tests/nvme-flash-layout.nix { inherit pkgs; };
         formatting = pkgs.stdenv.mkDerivation {
           name = "repo-formatting";
           src = self;
