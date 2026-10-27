@@ -19,6 +19,16 @@ let
     inherit pkgs support;
     hostDtb = "${config.hardware.deviceTree.package}/${config.hardware.deviceTree.name}";
   };
+  hostNvidiaOotMakefile = pkgs.writeText "nvidia-oot-host-Makefile" ''
+    # SPDX-License-Identifier: GPL-2.0
+
+    LINUXINCLUDE += -I$(srctree.nvconftest)
+    LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
+
+    subdir-ccflags-y += -Werror
+    subdir-ccflags-y += -Wmissing-prototypes
+    obj-m += drivers/platform/tegra/dce/
+  '';
   bpmpHostOverlay = pkgs.writeText "bpmp-host-overlay.dts" ''
     /dts-v1/;
     /plugin/;
@@ -148,6 +158,9 @@ in
             VFIO_PLATFORM = yes;
             TEGRA_BPMP_GUEST_PROXY = lib.mkDefault no;
             TEGRA_BPMP_HOST_PROXY = yes;
+          }
+          // lib.optionalAttrs (lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1") {
+            IOMMUFD = yes;
           };
         }
         {
@@ -200,12 +213,37 @@ in
       boot.kernelPackages = lib.mkForce (
         (cfg.dceHost.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
           _final: prev: {
+            devicetree =
+              if lib.versionAtLeast prev.kernel.version "7.1" then
+                prev.devicetree.overrideAttrs
+                  (old: {
+                    postPatch = (old.postPatch or "") + ''
+                      sed -i '/-Wno-graph_child_address/d' kernel-devicetree/scripts/Makefile.lib
+                    '';
+                  })
+              else
+                prev.devicetree;
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
                 pkgs.buildPackages.dtc
                 pkgs.buildPackages.unixtools.xxd
               ];
               postPatch = (old.postPatch or "") + ''
+                ${lib.optionalString (lib.versionAtLeast prev.kernel.version "7.1") ''
+                  substituteInPlace Makefile \
+                    --replace-fail 'modules: hwpm nvidia-oot nvgpu nvidia-display' 'modules: nvidia-oot' \
+                    --replace-fail 'modules_install: hwpm nvidia-oot nvgpu nvidia-display-install' 'modules_install: nvidia-oot' \
+                    --replace-fail 'nvidia-oot: conftest hwpm' 'nvidia-oot: conftest'
+                  sed -i '/KBUILD_EXTRA_SYMBOLS=.*hwpm.*Module.symvers/d' Makefile
+                  install -m 0644 ${hostNvidiaOotMakefile} nvidia-oot/Makefile
+
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-ipc.c \
+                    --replace-fail '#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)' '#if 1 /* Linux 7.1 iosys_map IVC */'
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/include/dce-ipc.h \
+                    --replace-fail '#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)' '#if 1 /* Linux 7.1 iosys_map IVC */'
+                  substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-module.c \
+                    --replace-fail '#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */' '#if 1 /* Linux 7.1 */'
+                ''}
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.c \
                   nvidia-oot/drivers/platform/tegra/dce/dce-host-proxy.c
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.h \
@@ -307,7 +345,9 @@ in
         {
           name = "BPMP virtualization core hooks";
           patch =
-            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
+            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
             else
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch";

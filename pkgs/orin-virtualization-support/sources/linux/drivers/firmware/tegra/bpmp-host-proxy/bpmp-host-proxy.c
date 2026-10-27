@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <soc/tegra/bpmp.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 #include <linux/miscdevice.h>
 #include "bpmp-host-proxy.h"
 
@@ -228,12 +229,25 @@ static int bpmp_host_proxy_probe(struct platform_device *pdev)
 /*
  * Removes module, sends appropriate message to kernel
  */
-static void bpmp_host_proxy_remove(struct platform_device *pdev)
+static int bpmp_host_proxy_remove_impl(struct platform_device *pdev)
 {
 	struct bpmp_host_proxy *proxy = platform_get_drvdata(pdev);
 
 	misc_deregister(&proxy->miscdev);
+	return 0;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static void bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	bpmp_host_proxy_remove_impl(pdev);
+}
+#else
+static int bpmp_host_proxy_remove(struct platform_device *pdev)
+{
+	return bpmp_host_proxy_remove_impl(pdev);
+}
+#endif
 
 /*
  * Opens device module, sends appropriate message to kernel
@@ -355,10 +369,15 @@ static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
 		if (clk_cmd == CMD_CLK_GET_RATE ||
 		    clk_cmd == CMD_CLK_GET_PARENT ||
 		    clk_cmd == CMD_CLK_IS_ENABLED ||
+		    /* Linux 7.1 removed these legacy discovery commands from the
+		     * upstream BPMP ABI after consolidating discovery in
+		     * CMD_CLK_GET_ALL_INFO. NVIDIA 6.6 and 6.12 still expose them. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0)
 		    clk_cmd == CMD_CLK_PROPERTIES ||
 		    clk_cmd == CMD_CLK_POSSIBLE_PARENTS ||
 		    clk_cmd == CMD_CLK_NUM_POSSIBLE_PARENTS ||
 		    clk_cmd == CMD_CLK_GET_POSSIBLE_PARENT ||
+#endif
 		    clk_cmd == CMD_CLK_GET_ALL_INFO ||
 		    clk_cmd == CMD_CLK_GET_MAX_CLK_ID ||
 		    clk_cmd == CMD_CLK_GET_FMAX_AT_VMIN)
