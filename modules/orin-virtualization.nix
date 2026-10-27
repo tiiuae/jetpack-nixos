@@ -96,9 +96,25 @@ in
       };
     };
 
-    dceHost.enable = lib.mkEnableOption "the Orin DCE display host proxy";
+    dceHost = {
+      enable = lib.mkEnableOption "the Orin DCE display host proxy";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.nvidia-jetpack.kernelPackages;
+        defaultText = lib.literalExpression "pkgs.nvidia-jetpack.kernelPackages";
+        description = "Base kernel package set used by the Orin DCE host.";
+      };
+    };
     mgbe0Host.enable = lib.mkEnableOption "host support for passing Orin MGBE0 through to a guest";
-    mgbe0Guest.enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
+    mgbe0Guest = {
+      enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.linuxPackages_6_12;
+        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        description = "Base kernel package set used by the Orin MGBE0 guest.";
+      };
+    };
   };
 
   config = lib.mkMerge [
@@ -182,7 +198,7 @@ in
       ];
 
       boot.kernelPackages = lib.mkForce (
-        (pkgs.nvidia-jetpack.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
+        (cfg.dceHost.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
           _final: prev: {
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
@@ -274,7 +290,7 @@ in
     })
 
     (lib.mkIf cfg.mgbe0Guest.enable {
-      boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_12;
+      boot.kernelPackages = lib.mkForce cfg.mgbe0Guest.kernelPackages;
       boot.kernelParams = [
         "clk_ignore_unused"
         "pd_ignore_unused"

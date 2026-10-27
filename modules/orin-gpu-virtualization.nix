@@ -57,6 +57,12 @@ in
 
     gpuPassthroughGuest = {
       enable = lib.mkEnableOption "Orin GPU/display passthrough guest support";
+      kernelPackages = lib.mkOption {
+        type = lib.types.raw;
+        default = pkgs.linuxPackages_6_12;
+        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        description = "Base kernel package set used by an Orin GPU/display guest.";
+      };
       role = lib.mkOption {
         type = lib.types.enum [
           "compute"
@@ -188,7 +194,7 @@ in
         "${pkgs.addDriverRunpath.driverLink}/share/egl/egl_external_platform.d/";
 
       boot.kernelPackages = lib.mkForce (
-        (pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
+        (cfg.gpuPassthroughGuest.kernelPackages.extend pkgs.nvidia-jetpack.kernelPackagesOverlay).extend (
           _final: prev: {
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               # Orin uses nvdisplay; JP7 also ships Thor's unified GPU driver
