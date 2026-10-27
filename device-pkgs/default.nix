@@ -166,7 +166,37 @@ let
     };
   };
 
-  signedFlashScript = writeShellApplication {
+  nvmeQspiLayout =
+    assert lib.assertMsg (cfg.flashScriptOverrides.partitionTemplate != null)
+      "NVMe recovery flashing requires an explicit QSPI-only partition template.";
+    runCommand "nvme-qspi-flash.xml"
+      { nativeBuildInputs = [ buildPackages.python3 ]; }
+      ''
+        python3 ${./check-qspi-layout.py} ${cfg.flashScriptOverrides.partitionTemplate}
+        cp ${cfg.flashScriptOverrides.partitionTemplate} "$out"
+      '';
+
+  nvmeQspiFlashScript = writeShellApplication {
+    name = "flash-nvme-qspi-${cfg.name}";
+    text = mkFlashScriptAuto { partitionTemplate = nvmeQspiLayout; };
+    meta.platforms = [ "x86_64-linux" ];
+  };
+
+  nvmeFlashScript = writeShellApplication {
+    name = "flash-nvme-${cfg.name}";
+    runtimeInputs = [ coreutils zstd buildPackages.util-linux ];
+    text = import ./nvmeflash-script.nix {
+      inherit config pkgs lib mkRcmBootScript;
+      qspiFlashScript = nvmeQspiFlashScript;
+      inherit l4tMajorMinorPatchVersion writeText deviceTree;
+    };
+    meta.platforms = [ "x86_64-linux" ];
+  };
+
+  signedFlashScript = mkSignedFlashScript legacyFlashScript;
+  signedNvmeFlashScript = mkSignedFlashScript nvmeFlashScript;
+
+  mkSignedFlashScript = flashScript: writeShellApplication {
     name = "flash-signed-${cfg.name}";
     runtimeInputs = [
       coreutils
@@ -254,7 +284,7 @@ let
         export SIGNED_SD_IMAGE_DIR="$signed_sd_image"
       fi
 
-      "${legacyFlashScript}/bin/flash-${cfg.name}" "$@"
+      "${lib.getExe flashScript}" "$@"
       status=$?
       cleanup
       exit $status
@@ -355,7 +385,7 @@ let
 in
 {
   inherit initrdFlashScript legacyFlashScript fuseScript rcmBoot pkcListComboHash mkRcmBootScript;
-  inherit extractSignedOrinArtifacts signedFlashScript;
+  inherit extractSignedOrinArtifacts signedFlashScript signedNvmeFlashScript;
   flashScript = initrdFlashScript;
 }
   // (lib.optionalAttrs cfg.firmware.fskp.enable { inherit fskpFuseScript; })

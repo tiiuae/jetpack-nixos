@@ -1,0 +1,19 @@
+SPDX-FileCopyrightText: 2026 TII (SSRC) and the Ghaf contributors
+SPDX-License-Identifier: BSD-2-Clause-Patent
+
+--- a/Silicon/NVIDIA/PrePi/PrePi.c
++++ b/Silicon/NVIDIA/PrePi/PrePi.c
+@@ -34,4 +34,5 @@
+ 
+ #include "PrePi.h"
++#include "reserve-dtb-ranges.h"
+ 
+ STATIC
+@@ -528,4 +529,7 @@
+   BuildStackHob (StackBase, StackSize + SIZE_4KB);
+ 
++  Status = ReserveDtbRanges ();
++  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Invalid VM reserved ranges - %r!\r\n", Status);
++
+   // Save pointer to PrePi version of the ArmReplaceLiveTranslationEntry()
+   // routine in a HOB so CpuDxe's ArmMmuLib instance can use it to replace
