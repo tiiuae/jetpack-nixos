@@ -112,6 +112,54 @@ let
     ];
     powerDomains = [ 3 ];
   };
+  mgbe0Device = {
+    # Raw IDs from ethernet@6800000 in NVIDIA's Orin AGX device tree.
+    clocks = [
+      357
+      361
+      369
+      373
+      374
+      375
+      376
+      377
+      379
+      380
+      381
+      378
+      248
+    ];
+    resets = [
+      46
+      45
+      47
+    ];
+    powerDomains = [ 18 ];
+  };
+  mgbe0 = {
+    device = mgbe0Device;
+    proxy = mgbe0Device // {
+      clocks = mgbe0Device.clocks ++ [
+        # Dedicated GBE parents required while preparing MGBE0 clocks.
+        319 # PLLGBE
+        320 # PLLGBE_HPS
+        366 # MGBES_APP
+        367 # UPHY_GBE_PLL2_TX_REF
+        368 # UPHY_GBE_PLL2_XDIG
+
+        # Shared USB/UTMI roots. The host proxy permits preparation and reads,
+        # but denies disable, rate, and parent changes for protected roots.
+        103 # UTMIP_PLL
+        292 # UTMIPLL_CLKOUT480
+        91 # OSC
+        14 # CLK_M
+
+        # Shared PCIe/UPHY reference roots, protected by the same restriction.
+        288 # PLLREFE_VCOOUT
+        327 # PLLREFE_VCOOUT_GATED
+      ];
+    };
+  };
   combine = left: right: {
     clocks = left.clocks ++ right.clocks;
     resets = left.resets ++ right.resets;
@@ -119,6 +167,10 @@ let
   };
 in
 {
-  inherit compute display;
+  inherit
+    compute
+    display
+    mgbe0
+    ;
   combined = combine compute display;
 }
