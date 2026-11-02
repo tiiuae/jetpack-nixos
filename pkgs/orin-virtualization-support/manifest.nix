@@ -104,6 +104,7 @@ let
       nodePath = "/bus@0/ethernet@6800000";
       compatible = "nvidia,tegra234-mgbe";
       dtSymbol = "mgbe0";
+      crosvmOverlayPath = "/run/mgbe0-net-vm.dtbo";
     };
 
     displayCardPath = "/dev/dri/by-path/platform-66200000.display-card";
