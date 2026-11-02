@@ -46,6 +46,8 @@ let
   '';
 in
 {
+  imports = [ ./orin-gpu-virtualization.nix ];
+
   options.hardware.nvidia-jetpack.virtualization = {
     bpmpHost = {
       allowAllDomains = lib.mkOption {
@@ -147,6 +149,8 @@ in
       ];
 
       boot.kernelParams = [
+        # TODO: investigate whether Orin needs this override and its MSI attack exposure.
+        # It bypasses VFIO's isolated-interrupt check.
         "vfio_iommu_type1.allow_unsafe_interrupts=1"
         "arm-smmu.disable_bypass=0"
       ];
