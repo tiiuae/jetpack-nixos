@@ -40,6 +40,7 @@ in
     ./nvidia-container-toolkit.nix
     ./nvpmodel.nix
     ./optee.nix
+    ./orin-virtualization.nix
     ./pre-switch-checks.nix
   ];
 
