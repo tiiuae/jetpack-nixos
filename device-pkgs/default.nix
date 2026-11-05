@@ -188,9 +188,9 @@ let
   nvmeFlashRecoveryInputs =
     let
       initrd = import ./nvme-flash-initrd.nix { inherit config pkgs lib; };
-      cmdline = writeText "nvme-recovery-cmdline" (lib.concatStringsSep " " ([ "clk_ignore_unused" ] ++ cfg.console.args));
+      cmdline = pkgs.writeText "nvme-recovery-cmdline" (lib.concatStringsSep " " ([ "clk_ignore_unused" ] ++ cfg.console.args));
     in
-    runCommand "nvme-flash-recovery-inputs" { } ''
+    pkgs.runCommand "nvme-flash-recovery-inputs" { } ''
       mkdir -p $out
       cp ${config.system.build.kernel}/${config.system.boot.loader.kernelFile} $out/Image
       cp ${initrd}/initrd $out/initrd
