@@ -1,5 +1,4 @@
-{ writers
-, python3Packages
+{ buildPackages
 , fetchFromGitHub
 , lib
 ,
@@ -8,9 +7,9 @@
 let
   uefi-firmware-parser =
     if lib.versionAtLeast lib.trivial.release "26.05" then
-      python3Packages.uefi-firmware-parser
+      buildPackages.python3Packages.uefi-firmware-parser
     else
-      python3Packages.buildPythonPackage {
+      buildPackages.python3Packages.buildPythonPackage {
         pname = "uefi-firmware-parser";
         version = "1.14";
         pyproject = true;
@@ -23,8 +22,8 @@ let
         };
 
         build-system = [
-          python3Packages.setuptools
-          python3Packages.wheel
+          buildPackages.python3Packages.setuptools
+          buildPackages.python3Packages.wheel
         ];
 
         pythonRemoveDeps = [ "future" ];
@@ -41,7 +40,7 @@ let
       };
 in
 
-writers.writePython3Bin "patchfv"
+buildPackages.writers.writePython3Bin "patchfv"
 {
   libraries = [ uefi-firmware-parser ];
   # E501: ignore line length
