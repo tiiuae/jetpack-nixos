@@ -539,7 +539,8 @@ in
             CAN = yes;
             CAN_DEV = module;
             CAN_RAW = module;
-            PTP_1588_CLOCK = module;
+            # The same guest can also contain the built-in MGBE driver.
+            PTP_1588_CLOCK = yes;
           };
         }
       ];
