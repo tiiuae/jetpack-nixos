@@ -160,6 +160,27 @@ let
       ];
     };
   };
+  mttcan = {
+    # Raw IDs from mttcan@c310000 and mttcan@c320000 in NVIDIA's
+    # Orin NX and AGX device trees. PLLAON is shared by both controllers.
+    device = {
+      clocks = [
+        284 # TEGRA234_CLK_CAN1_CORE
+        10 # TEGRA234_CLK_CAN1_HOST
+        9 # TEGRA234_CLK_CAN1
+        285 # TEGRA234_CLK_CAN2_CORE
+        12 # TEGRA234_CLK_CAN2_HOST
+        11 # TEGRA234_CLK_CAN2
+        94 # TEGRA234_CLK_PLLAON
+      ];
+      resets = [
+        4 # TEGRA234_RESET_CAN1
+        5 # TEGRA234_RESET_CAN2
+      ];
+      powerDomains = [ ];
+    };
+    proxy = mttcan.device;
+  };
   combine = left: right: {
     clocks = left.clocks ++ right.clocks;
     resets = left.resets ++ right.resets;
@@ -170,6 +191,7 @@ in
   inherit
     compute
     display
+    mttcan
     mgbe0
     ;
   combined = combine compute display;

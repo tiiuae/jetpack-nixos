@@ -1,0 +1,60 @@
+// SPDX-FileCopyrightText: 2022-2026 TII (SSRC) and the Ghaf contributors
+// SPDX-License-Identifier: GPL-2.0-only
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    fragment@0 {
+        target-path = "/";
+
+        __overlay__ {
+            aliases {
+                mttcan0 = &mttcan0;
+                mttcan1 = &mttcan1;
+            };
+
+            mttcan0: can0 {
+                compatible = "nvidia,tegra194-mttcan";
+                reg-names = "can-regs", "glue-regs", "msg-ram";
+                pll_source = "pllaon";
+                clocks = @bpmpCan0Clocks@;
+                clock-names = "can_core", "can_host", "can", "pllaon";
+                resets = @bpmpCan0Resets@;
+                reset-names = "can";
+                mram-params = <0 16 16 32 0 0 16 16 16>;
+                tx-config = <0 16 0 64>;
+                rx-config = <64 64 64>;
+                bitrates = <500 2000>;
+                bittimes = <125 0 15 19 3 0 3
+                            250 0 0 174 23 0 1
+                            250 0 7 19 3 0 2
+                            500 0 3 19 3 0 3
+                            1000 0 1 16 6 0 3
+                            2000 0 0 16 6 0 2>;
+                status = "okay";
+            };
+
+            mttcan1: can1 {
+                compatible = "nvidia,tegra194-mttcan";
+                reg-names = "can-regs", "glue-regs", "msg-ram";
+                pll_source = "pllaon";
+                clocks = @bpmpCan1Clocks@;
+                clock-names = "can_core", "can_host", "can", "pllaon";
+                resets = @bpmpCan1Resets@;
+                reset-names = "can";
+                mram-params = <0 16 16 32 0 0 16 16 16>;
+                tx-config = <0 16 0 64>;
+                rx-config = <64 64 64>;
+                bitrates = <500 2000>;
+                bittimes = <125 0 15 19 3 0 3
+                            250 0 0 174 23 0 1
+                            250 0 7 19 3 0 2
+                            500 0 3 19 3 0 3
+                            1000 0 1 16 6 0 3
+                            2000 0 0 16 6 0 2>;
+                status = "okay";
+            };
+        };
+    };
+};
