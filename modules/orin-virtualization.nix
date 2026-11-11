@@ -35,9 +35,17 @@ let
   mttcanModules = config.boot.kernelPackages.nvidia-oot-modules.overrideAttrs (old: {
     pname = "l4t-mttcan-modules";
     postPatch = (old.postPatch or "") + ''
+      ${if lib.versionAtLeast old.version "39" then ''
+        substituteInPlace Makefile \
+          --replace-fail 'modules: hwpm nvidia-oot nvgpu $(NVIDIA_DISPLAY_MODULE_TARGETS)' 'modules: nvidia-oot' \
+          --replace-fail 'modules_install: hwpm nvidia-oot nvgpu \
+        ${"\t"}$(NVIDIA_DISPLAY_MODULE_INSTALL_TARGETS)' 'modules_install: nvidia-oot'
+      '' else ''
+        substituteInPlace Makefile \
+          --replace-fail 'modules: hwpm nvidia-oot nvgpu nvidia-display' 'modules: nvidia-oot' \
+          --replace-fail 'modules_install: hwpm nvidia-oot nvgpu nvidia-display-install' 'modules_install: nvidia-oot'
+      ''}
       substituteInPlace Makefile \
-        --replace-fail 'modules: hwpm nvidia-oot nvgpu nvidia-display' 'modules: nvidia-oot' \
-        --replace-fail 'modules_install: hwpm nvidia-oot nvgpu nvidia-display-install' 'modules_install: nvidia-oot' \
         --replace-fail 'nvidia-oot: conftest hwpm' 'nvidia-oot: conftest' \
         --replace-fail '$(MAKEFILE_DIR)/hwpm/drivers/tegra/hwpm/Module.symvers' ""
 
@@ -438,11 +446,8 @@ in
         overlays = [
           {
             name = "mttcan_host_overlay";
-            # NVIDIA's BSP supplies both upstream-style and `-nv` Orin DTBs,
-            # but only the latter contain the two mttcan nodes.  The root
-            # compatible strings are identical, so compatibility matching
-            # alone would also try this overlay on node-less DTBs and fail.
-            filter = "-nv";
+            # Other BSP trees, including some `-nv` variants, lack CAN nodes.
+            filter = config.hardware.deviceTree.name;
             dtsFile = "${support}/device-trees/mttcan/mttcan-host-overlay.dts";
           }
         ];
