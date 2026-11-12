@@ -6,6 +6,7 @@
 , argsOverride ? { }
 , buildLinux
 , fetchgit
+, fetchpatch
 , ...
 }@args:
 buildLinux (args // {
@@ -41,7 +42,15 @@ buildLinux (args // {
   autoModules = false;
   features = { }; # TODO: Why is this needed in nixpkgs master (but not NixOS 22.05)?
 
-  inherit kernelPatches;
+  kernelPatches = [
+    {
+      name = "tools-add-128-bit-integer-types-for-aarch64";
+      patch = fetchpatch {
+        url = "https://github.com/torvalds/linux/commit/10a47fb67340bca274276faf855d7d460afd9a7a.patch";
+        hash = "sha256-w6ZnvodW2kS3bqtZVvVN5qDt1Zc7fJvnywki3MBsER0=";
+      };
+    }
+  ] ++ kernelPatches;
 
   structuredExtraConfig = with lib.kernel; {
     # Override the default CMA_SIZE_MBYTES=32M setting in common-config.nix with the default from tegra_defconfig
