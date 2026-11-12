@@ -206,6 +206,8 @@ static int bpmp_host_proxy_probe(struct platform_device *pdev)
 	proxy->allowed.pd_size = of_property_read_variable_u32_array(
 		pdev->dev.of_node, "allowed-power-domains", proxy->allowed.pd, 0,
 		BPMP_HOST_MAX_POWER_DOMAINS_SIZE);
+	proxy->allowed.allow_memory_control = of_property_read_bool(
+		pdev->dev.of_node, "allow-memory-control");
 	for (i = 0; i < proxy->allowed.pd_size; i++)
 		deb_info("allowed power domain %d", proxy->allowed.pd[i]);
 
@@ -319,19 +321,23 @@ static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
 	uint32_t clk_id = 0;
 	int i = 0;
 
-	// Allow get information, DVFS, ISO Client and bandwidth mrqs
+	/* Read-only firmware queries are available to every consumer. */
 	if(msg->mrq == MRQ_PING ||
 	   msg->mrq == MRQ_QUERY_TAG ||
 	   msg->mrq == MRQ_THREADED_PING ||
 	   msg->mrq == MRQ_QUERY_ABI ||
-	   msg->mrq == MRQ_EMC_DVFS_LATENCY ||
-	   msg->mrq == MRQ_EMC_DVFS_EMCHUB ||
-	   msg->mrq == MRQ_ISO_CLIENT ||
 	   msg->mrq == MRQ_STRAP ||
-	   msg->mrq == MRQ_BWMGR || 
 	   msg->mrq == MRQ_QUERY_FW_TAG ){
 		return true;
 	}
+
+	/* Memory bandwidth and EMC requests affect the whole SoC. CAN and
+	 * Ethernet consumers do not need this GPU/display capability. */
+	if (msg->mrq == MRQ_EMC_DVFS_LATENCY ||
+	    msg->mrq == MRQ_EMC_DVFS_EMCHUB ||
+	    msg->mrq == MRQ_ISO_CLIENT ||
+	    msg->mrq == MRQ_BWMGR)
+		return allowed->allow_memory_control;
 
 	/* The policed MRQs below read a request struct out of tx. tx.data is NULL
 	 * when the guest sends tx.size == 0, and both fields are guest-controlled,
@@ -368,6 +374,7 @@ static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
 		 * and can prevent an otherwise-owned device clock from registering.
 		 * Keep all state-changing operations policed by the per-VM list below. */
 		if (clk_cmd == CMD_CLK_GET_RATE ||
+		    clk_cmd == CMD_CLK_ROUND_RATE ||
 		    clk_cmd == CMD_CLK_GET_PARENT ||
 		    clk_cmd == CMD_CLK_IS_ENABLED ||
 		    /* Linux 7.1 removed these legacy discovery commands from the
@@ -391,6 +398,12 @@ static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
 		 * changes below. */
 		if (clk_cmd == CMD_CLK_ENABLE && clk_root_is_protected(clk_id))
 			return true;
+
+		/* Deny other mutations, including the legacy RESET_REFCOUNTS
+		 * command, even if the requested clock is allow-listed. */
+		if (clk_cmd != CMD_CLK_ENABLE && clk_cmd != CMD_CLK_DISABLE &&
+		    clk_cmd != CMD_CLK_SET_RATE && clk_cmd != CMD_CLK_SET_PARENT)
+			return false;
 
 		for(i = 0; i < allowed->clocks_size; i++){
 			// bits[23..0] are the clock id

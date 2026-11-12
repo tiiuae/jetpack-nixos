@@ -34,6 +34,9 @@ let
   mttcanDevices = map (controller: controller.sysfsName) mttcan.controllers;
   mttcanModules = config.boot.kernelPackages.nvidia-oot-modules.overrideAttrs (old: {
     pname = "l4t-mttcan-modules";
+    # The kernel's O=$(buildRoot) clears KBUILD_OUTPUT in Linux 6.18.
+    # NVIDIA selects the prepared kernel build tree through KERNEL_OUTPUT.
+    makeFlags = lib.filter (flag: !(lib.hasPrefix "O=" flag)) old.makeFlags;
     postPatch = (old.postPatch or "") + ''
       ${if lib.versionAtLeast old.version "39" then ''
         substituteInPlace Makefile \
@@ -106,15 +109,17 @@ let
           done
         fi
 
-        current="$(basename "$(readlink -f "$device_path/driver" 2>/dev/null)" || true)"
-        if [ -n "$current" ] && [ "$current" != vfio-platform ]; then
-          echo "$device" > "$device_path/driver/unbind"
+        # Override first so a concurrent native probe cannot reclaim the device.
+        echo vfio-platform > "$device_path/driver_override"
+        if [ -L "$device_path/driver" ]; then
+          current="$(basename "$(readlink -f "$device_path/driver")")"
+          if [ "$current" != vfio-platform ]; then
+            echo "$device" > "$device_path/driver/unbind"
+          fi
         fi
 
-        echo vfio-platform > "$device_path/driver_override"
-        current="$(basename "$(readlink -f "$device_path/driver" 2>/dev/null)" || true)"
-        if [ "$current" != vfio-platform ]; then
-          echo "$device" > /sys/bus/platform/drivers/vfio-platform/bind
+        if [ ! -L "$device_path/driver" ]; then
+          echo "$device" > /sys/bus/platform/drivers_probe
         fi
       done
     '';
@@ -136,6 +141,7 @@ let
             allowed-clocks = <${ids policy.clocks}>;
             allowed-resets = <${ids policy.resets}>;
             allowed-power-domains = <${ids policy.powerDomains}>;
+            ${lib.optionalString policy.allowMemoryControl "allow-memory-control;"}
             status = "okay";
         };
       '') consumers
@@ -167,6 +173,7 @@ in
         type = lib.types.attrsOf (
           lib.types.submodule {
             options = {
+              allowMemoryControl = lib.mkEnableOption "SoC-wide BPMP memory bandwidth and EMC controls";
               clocks = lib.mkOption {
                 type = lib.types.listOf lib.types.int;
                 default = [ ];
@@ -220,8 +227,8 @@ in
       enable = lib.mkEnableOption "both Orin MTTCAN controllers in a passthrough guest";
       kernelPackages = lib.mkOption {
         type = lib.types.raw;
-        default = pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay;
-        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12.extend pkgs.nvidia-jetpack.kernelPackagesOverlay";
+        default = (if cfg.mgbe0Guest.enable then cfg.mgbe0Guest.kernelPackages else pkgs.linuxPackages).extend pkgs.nvidia-jetpack.kernelPackagesOverlay;
+        defaultText = lib.literalExpression "(if cfg.mgbe0Guest.enable then cfg.mgbe0Guest.kernelPackages else pkgs.linuxPackages).extend pkgs.nvidia-jetpack.kernelPackagesOverlay";
         description = "Kernel package set, including NVIDIA OOT modules, used by the Orin MTTCAN guest.";
       };
     };
@@ -465,6 +472,13 @@ in
     })
 
     (lib.mkIf bpmpGuestEnabled {
+      assertions = [
+        {
+          assertion = !(cfg.mgbe0Guest.enable && cfg.mttcanGuest.enable)
+            || cfg.mgbe0Guest.kernelPackages.kernel.outPath == cfg.mttcanGuest.kernelPackages.kernel.outPath;
+          message = "MGBE0 and MTTCAN sharing a guest must select the same base kernel.";
+        }
+      ];
       boot.kernelPackages = lib.mkForce (
         if cfg.mttcanGuest.enable then cfg.mttcanGuest.kernelPackages else cfg.mgbe0Guest.kernelPackages
       );
@@ -482,6 +496,8 @@ in
           patch =
             if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.18" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.18.patch"
             else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
             else

@@ -102,7 +102,13 @@ in
       ];
 
       hardware.nvidia-jetpack.virtualization = {
-        bpmpHost.consumers = lib.mapAttrs (_: assignment: support.bpmpPolicies.${assignment.role}) hostAssignments;
+        bpmpHost.consumers = lib.mapAttrs
+          (_: assignment:
+            support.bpmpPolicies.${assignment.role} // {
+              # GPU/display drivers require SoC-wide bandwidth and EMC controls.
+              allowMemoryControl = true;
+            })
+          hostAssignments;
         dceHost.enable = displayOwner;
       };
 

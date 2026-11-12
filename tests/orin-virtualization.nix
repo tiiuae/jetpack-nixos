@@ -45,6 +45,37 @@ let
     };
   };
   results = {
+    canPreservesDefaultKernel = (evaluate {
+      hardware.nvidia-jetpack.virtualization.mttcanGuest.enable = true;
+    }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version;
+    canUsesSelectedEthernetKernel = (evaluate {
+      hardware.nvidia-jetpack.virtualization = {
+        mttcanGuest.enable = true;
+        mgbe0Guest = {
+          enable = true;
+          kernelPackages = base.pkgs.linuxPackages;
+        };
+      };
+    }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version;
+    conflictingGuestKernelsRejected = rejects "MGBE0 and MTTCAN sharing a guest must select the same base kernel." (evaluate {
+      hardware.nvidia-jetpack.virtualization = {
+        mttcanGuest = {
+          enable = true;
+          kernelPackages = base.pkgs.linuxPackages.extend base.pkgs.nvidia-jetpack.kernelPackagesOverlay;
+        };
+        mgbe0Guest = {
+          enable = true;
+          kernelPackages = base.pkgs.linuxPackages_6_12;
+        };
+      };
+    });
+    memoryControlOptIn = !(evaluate {
+      hardware.nvidia-jetpack.virtualization.bpmpHost.consumers.net-vm = {
+        clocks = [ 9 10 94 ];
+        resets = [ 4 5 ];
+      };
+    }).hardware.nvidia-jetpack.virtualization.bpmpHost.consumers.net-vm.allowMemoryControl;
+    graphicsRetainsMemoryControl = (gpuConfig combined false).hardware.nvidia-jetpack.virtualization.bpmpHost.consumers.gui.allowMemoryControl;
     guestDoesNotStartDisplayWorkloads = !((evaluate {
       hardware.nvidia-jetpack.virtualization.gpuPassthroughGuest.enable = true;
     }).systemd.services ? kms-owner);
