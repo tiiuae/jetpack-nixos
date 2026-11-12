@@ -40,12 +40,16 @@ int main(void)
         assert(check_if_allowed(&allowed, &msg));
         clk.cmd_and_id = (CMD_CLK_GET_RATE << 24) | roots[i];
         assert(check_if_allowed(&allowed, &msg));
+        clk.cmd_and_id = (CMD_CLK_ROUND_RATE << 24) | roots[i];
+        assert(check_if_allowed(&allowed, &msg));
     }
     allowed.clock[0] = 9;
     clk.cmd_and_id = (CMD_CLK_SET_RATE << 24) | 9;
     assert(check_if_allowed(&allowed, &msg));
     clk.cmd_and_id = (CMD_CLK_SET_RATE << 24) | 10;
     assert(!check_if_allowed(&allowed, &msg));
+    clk.cmd_and_id = (CMD_CLK_ROUND_RATE << 24) | 10;
+    assert(check_if_allowed(&allowed, &msg));
     clk.cmd_and_id = (CMD_CLK_RESET_REFCOUNTS << 24) | 9;
     assert(!check_if_allowed(&allowed, &msg));
     msg.tx.size = 0;

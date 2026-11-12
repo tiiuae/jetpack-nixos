@@ -374,6 +374,7 @@ static bool check_if_allowed(const struct bpmp_allowed_res *allowed,
 		 * and can prevent an otherwise-owned device clock from registering.
 		 * Keep all state-changing operations policed by the per-VM list below. */
 		if (clk_cmd == CMD_CLK_GET_RATE ||
+		    clk_cmd == CMD_CLK_ROUND_RATE ||
 		    clk_cmd == CMD_CLK_GET_PARENT ||
 		    clk_cmd == CMD_CLK_IS_ENABLED ||
 		    /* Linux 7.1 removed these legacy discovery commands from the
