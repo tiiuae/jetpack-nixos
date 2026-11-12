@@ -9,11 +9,6 @@
         target-path = "/";
 
         __overlay__ {
-            aliases {
-                mttcan0 = &mttcan0;
-                mttcan1 = &mttcan1;
-            };
-
             mttcan0: can0 {
                 compatible = "nvidia,tegra194-mttcan";
                 reg-names = "can-regs", "glue-regs", "msg-ram";

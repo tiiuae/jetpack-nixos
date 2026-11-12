@@ -199,6 +199,8 @@
       };
 
       checks = forAllSystems ({ pkgs, system, ... }: {
+        bpmp-policy = import ./tests/bpmp-policy.nix { inherit pkgs; };
+        bind-mttcan = import ./tests/bind-mttcan.nix { inherit self pkgs; };
         orin-virtualization = import ./tests/orin-virtualization.nix { inherit self lib pkgs; };
         uefi-reserved-ranges = import ./tests/uefi-reserved-ranges.nix { inherit lib pkgs; };
         nvme-flash-layout = import ./tests/nvme-flash-layout.nix { inherit pkgs; };

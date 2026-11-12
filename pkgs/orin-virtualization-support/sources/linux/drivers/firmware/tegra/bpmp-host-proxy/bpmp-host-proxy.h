@@ -8,6 +8,7 @@
 #define BPMP_HOST_MAX_POWER_DOMAINS_SIZE   256
 
 struct bpmp_allowed_res {
+	bool allow_memory_control;
 	int clocks_size;
     uint32_t clock[BPMP_HOST_MAX_CLOCKS_SIZE];
     int resets_size;
