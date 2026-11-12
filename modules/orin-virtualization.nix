@@ -34,6 +34,9 @@ let
   mttcanDevices = map (controller: controller.sysfsName) mttcan.controllers;
   mttcanModules = config.boot.kernelPackages.nvidia-oot-modules.overrideAttrs (old: {
     pname = "l4t-mttcan-modules";
+    # The kernel's O=$(buildRoot) clears KBUILD_OUTPUT in Linux 6.18.
+    # NVIDIA selects the prepared kernel build tree through KERNEL_OUTPUT.
+    makeFlags = lib.filter (flag: !(lib.hasPrefix "O=" flag)) old.makeFlags;
     postPatch = (old.postPatch or "") + ''
       ${if lib.versionAtLeast old.version "39" then ''
         substituteInPlace Makefile \
