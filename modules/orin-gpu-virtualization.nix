@@ -60,8 +60,8 @@ in
       enable = lib.mkEnableOption "Orin GPU/display passthrough guest support";
       kernelPackages = lib.mkOption {
         type = lib.types.raw;
-        default = pkgs.linuxPackages_6_12;
-        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        default = pkgs.linuxPackages;
+        defaultText = lib.literalExpression "pkgs.linuxPackages";
         description = "Base kernel package set used by an Orin GPU/display guest.";
       };
       role = lib.mkOption {
@@ -235,7 +235,14 @@ in
             nvidia-oot-modules = prev.nvidia-oot-modules.overrideAttrs (old: {
               # Orin uses nvdisplay; JP7 also ships Thor's unified GPU driver
               # with the same module names.
-              makeFlags = (old.makeFlags or [ ])
+              # NVIDIA supplies KERNEL_OUTPUT; inherited O= clears it on 6.18.
+              makeFlags = lib.filter (flag: !(lib.hasPrefix "O=" flag)) (old.makeFlags or [ ])
+                # Use the upstream Realtek drivers instead of the BSP copies.
+                ++ lib.optionals (lib.versionAtLeast prev.kernel.version "6.18") [
+                "NV_OOT_REALTEK_BTUSB_SKIP_BUILD=y"
+                "NV_OOT_REALTEK_RTL8822CE_SKIP_BUILD=y"
+                "NV_OOT_REALTEK_RTL8852CE_SKIP_BUILD=y"
+              ]
                 ++ lib.optional (lib.versionAtLeast pkgs.nvidia-jetpack.jetpackMajorMinorPatchVersion "7")
                 "NVIDIA_DISPLAY_MODULE_TARGETS=nvidia-display";
               patches =
@@ -297,6 +304,8 @@ in
           patch =
             if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.18" then
+              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.18.patch"
             else
               "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch";
         }

@@ -217,8 +217,8 @@ in
       enable = lib.mkEnableOption "Orin MGBE0 support in a passthrough guest";
       kernelPackages = lib.mkOption {
         type = lib.types.raw;
-        default = pkgs.linuxPackages_6_12;
-        defaultText = lib.literalExpression "pkgs.linuxPackages_6_12";
+        default = pkgs.linuxPackages;
+        defaultText = lib.literalExpression "pkgs.linuxPackages";
         description = "Base kernel package set used by the Orin MGBE0 guest.";
       };
     };
