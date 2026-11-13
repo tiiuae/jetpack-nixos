@@ -45,6 +45,17 @@ let
     };
   };
   results = {
+    ethernetPreservesDefaultKernel = (evaluate {
+      hardware.nvidia-jetpack.virtualization.mgbe0Guest.enable = true;
+    }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version;
+    graphicsPreservesDefaultKernel = lib.all
+      (role: (evaluate {
+        hardware.nvidia-jetpack.virtualization.gpuPassthroughGuest = {
+          enable = true;
+          inherit role;
+        };
+      }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version)
+      [ "compute" "display" "combined" ];
     canPreservesDefaultKernel = (evaluate {
       hardware.nvidia-jetpack.virtualization.mttcanGuest.enable = true;
     }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version;
