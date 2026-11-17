@@ -448,6 +448,9 @@ in
         SUBSYSTEM=="vfio", GROUP="kvm"
       '';
 
+      # A host driver still registering hides its unbind file, failing bindMttcan at boot.
+      boot.blacklistedKernelModules = [ "mttcan" ];
+
       hardware.deviceTree = {
         enable = true;
         overlays = [
