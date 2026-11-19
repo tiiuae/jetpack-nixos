@@ -91,6 +91,7 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.iproute2
+      pkgs.systemd
     ];
     text = ''
       set -eu
@@ -121,6 +122,10 @@ let
         if [ ! -L "$device_path/driver" ]; then
           echo "$device" > /sys/bus/platform/drivers_probe
         fi
+
+        # Binding creates the VFIO node before udev grants the VM access.
+        iommu_group="$(readlink -e "$device_path/iommu_group")"
+        udevadm wait --initialized=yes --timeout=30 "/dev/vfio/''${iommu_group##*/}"
       done
     '';
   };
