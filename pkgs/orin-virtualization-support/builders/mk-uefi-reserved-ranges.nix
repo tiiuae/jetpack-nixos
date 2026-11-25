@@ -3,9 +3,7 @@
 { lib }:
 { pkgs, support, includeDispVmRam }:
 let
-  inherit (support.passthrough.reservedMemory) vmCma scanout dispRamLow dispRamHigh;
-  # vmHs is the host1x register aperture, not DRAM.
-  ranges = [ vmCma scanout ] ++ lib.optionals includeDispVmRam [ dispRamLow dispRamHigh ];
+  ranges = support.passthrough.guestDramRanges includeDispVmRam;
   cell = value: "0x${lib.toLower (lib.toHexString value)}";
   cells = value: "${cell (value / 4294967296)} ${cell (lib.mod value 4294967296)}";
   reg = lib.concatMapStringsSep " " (range: "${cells range.base} ${cells range.size}") ranges;
