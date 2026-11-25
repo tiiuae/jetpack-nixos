@@ -353,6 +353,9 @@ in
                   substituteInPlace nvidia-oot/drivers/platform/tegra/dce/dce-module.c \
                     --replace-fail '#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */' '#if 1 /* Linux 7.1 */'
                 ''}
+                ${lib.optionalString (lib.versionAtLeast pkgs.nvidia-jetpack.jetpackMajorMinorPatchVersion "7") ''
+                  patch -p1 -d nvidia-oot < ${support}/patches/nvidia-oot/dce/0003-dce-client-ipc-wait-timeout-jp7.patch
+                ''}
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.c \
                   nvidia-oot/drivers/platform/tegra/dce/dce-host-proxy.c
                 install -D ${support}/sources/nvidia-oot/drivers/platform/tegra/dce-host-proxy/dce-host-proxy.h \
