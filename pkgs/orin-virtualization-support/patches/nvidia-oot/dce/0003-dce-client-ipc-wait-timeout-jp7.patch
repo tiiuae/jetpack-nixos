@@ -1,0 +1,61 @@
+From: Ghaf contributors <ghaf@tii.ae>
+Subject: [PATCH] dce: make the bounded client IPC wait uninterruptible on JP7
+
+In JetPack 7, dce_client_ipc_wait() already passes DCE_IPC_TIMEOUT_MS_MAX
+(10 s) to dce_wait_cond_wait_interruptible(), but loops back to retry_wait
+whenever wait_event_interruptible_timeout() returns -ERESTARTSYS. With a
+pending fatal signal (such as SIGKILL on a VMM thread inside dce-host-proxy
+write()), wait_event_interruptible_timeout() returns -ERESTARTSYS immediately,
+resetting the 10 s timeout on every iteration and spinning in kernel space
+indefinitely.
+
+Use wait_event_timeout() directly and pair it with wake_up() in
+dce_client_ipc_wakeup() (wake_up_interruptible() ignores TASK_UNINTERRUPTIBLE),
+so signals neither desynchronize the IVC reply channel nor spin past
+DCE_IPC_TIMEOUT_MS_MAX.
+
+Host only. The guest short-circuits dce_ipc_send_message_sync() through
+tegra_dce_ipc_send_redirect (0001) before it can reach this wait.
+---
+--- a/drivers/platform/tegra/dce/dce-client-ipc.c
++++ b/drivers/platform/tegra/dce/dce-client-ipc.c
+@@ -367,17 +367,19 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
+ 		goto fail;
+ 	}
+ 
+-retry_wait:
+-	ret = dce_wait_cond_wait_interruptible(d, &cl->recv_wait, true, DCE_IPC_TIMEOUT_MS_MAX);
+-	if (ret != 0) {
+-		if (ret == -ERESTARTSYS) { /* Interrupt. */
+-			dce_os_debug(d, "Client [%u] wait interrupted: retrying.", type);
+-			goto retry_wait;
+-		} else { /* Unexpected error. */
+-			dce_os_err(d, "Client [%u] unexpected err: [%d]", type, ret);
+-			goto fail;
+-		}
++	/*
++	 * Not interruptible: retrying on -ERESTARTSYS resets the 10 s timeout
++	 * and spins with a pending signal (e.g. SIGKILL), holding a wedged
++	 * caller in kernel space indefinitely.
++	 */
++	if (!wait_event_timeout(cl->recv_wait.cond_wait.wq,
++				dce_os_atomic_read(&cl->recv_wait.complete) == 1,
++				msecs_to_jiffies(DCE_IPC_TIMEOUT_MS_MAX))) {
++		dce_os_err(d, "Client [%u] timed out waiting for DCE reply", type);
++		ret = -ETIMEDOUT;
++		goto fail;
+ 	}
++	dce_os_atomic_set(&cl->recv_wait.complete, 0);
+ 
+ fail:
+ 	return ret;
+@@ -475,6 +477,8 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
+ 	if (type == DCE_CLIENT_IPC_TYPE_RM_EVENT)
+ 		return dce_client_schedule_event_work(d);
+ #endif
+ 
+-	dce_wait_cond_signal_interruptible(d, &cl->recv_wait);
++	/* Pair with wait_event_timeout(): wake_up_interruptible() skips TASK_UNINTERRUPTIBLE. */
++	dce_os_atomic_set(&cl->recv_wait.complete, 1);
++	wake_up(&cl->recv_wait.cond_wait.wq);
+ }
