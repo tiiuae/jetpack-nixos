@@ -4,9 +4,9 @@
 # Live-DT compute resources:
 #   gpu@17000000    clocks 304 41 236   reset 19    pd 35
 #   host1x@13e00000 clocks 46 1
-#   vic@15340000    clock 167           reset 113   pd 29
-#   nvdec@15480000  clocks 83 40 154    reset 44    pd 23
-#   nvjpg@15540000  clock 20            reset 10    pd 36
+#   vic@15340000    clock 167 (nafll 207)     reset 113   pd 29
+#   nvdec@15480000  clocks 83 (nafll 199) 40 154 reset 44 pd 23
+#   nvjpg@15540000  clock 20 (nafll 210)      reset 10    pd 36
 let
   compute = {
     clocks = [
@@ -18,6 +18,9 @@ let
       83
       154
       167
+      199 # TEGRA234_CLK_NAFLL_NVDEC
+      207 # TEGRA234_CLK_NAFLL_VIC
+      210 # TEGRA234_CLK_NAFLL_NVJPG1
       236
       304
     ];
