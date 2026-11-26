@@ -281,52 +281,12 @@ in
         )
       );
       boot.kernelParams = [
-        "clk_ignore_unused"
-        "pd_ignore_unused"
         "nvidia-drm.modeset=1"
         "drm.vblankoffdelay=0"
       ];
       boot.extraModulePackages = [ config.boot.kernelPackages.nvidia-oot-modules ];
       boot.kernelModules = guestPayload.guestKernelModules;
       hardware.firmware = [ pkgs.nvidia-jetpack.l4t-firmware ];
-
-      boot.kernelPatches = [
-        {
-          name = "tegra fixed chip id";
-          patch = "${support}/patches/linux/0004-tegra-fixed-chip-id.patch";
-        }
-        {
-          name = "bpmp-virt proxy drivers";
-          patch = "${support}/patches/linux/bpmp-sources.patch";
-        }
-        {
-          name = "bpmp-virt core hooks";
-          patch =
-            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
-            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.18" then
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.18.patch"
-            else
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch";
-        }
-        {
-          name = "bpmp guest proxy kernel configuration";
-          patch = null;
-          structuredExtraConfig = with lib.kernel; {
-            ARCH_TEGRA = lib.mkForce yes;
-            ARCH_TEGRA_234_SOC = yes;
-            TEGRA_HSP_MBOX = yes;
-            TEGRA_IVC = yes;
-            TEGRA_BPMP = yes;
-            TEGRA_BPMP_GUEST_PROXY = yes;
-            TEGRA_BPMP_HOST_PROXY = no;
-            CLK_TEGRA_BPMP = yes;
-            RESET_TEGRA_BPMP = yes;
-            PM_GENERIC_DOMAINS = yes;
-            ARM64_PMEM = yes;
-          };
-        }
-      ];
 
       assertions = [
         {

@@ -17,6 +17,14 @@ let
   valid = config: lib.all (a: a.assertion) config.assertions;
   rejects = message: config:
     lib.any (a: a.message == message && !a.assertion) config.assertions;
+  guest = virtualization: evaluate { hardware.nvidia-jetpack.virtualization = virtualization; };
+  passthroughGuests = [
+    (guest { mttcanGuest.enable = true; })
+    (guest { mgbe0Guest.enable = true; })
+    (guest { mgbe0Guest.enable = true; mttcanGuest.enable = true; })
+  ] ++ map
+    (role: guest { gpuPassthroughGuest = { enable = true; inherit role; }; })
+    [ "combined" "compute" "display" ];
   split = { compute.role = "compute"; display.role = "display"; };
   combined = { gui.role = "combined"; };
   gpuConfig = assignments: allowAllDomains: evaluate {
@@ -45,6 +53,9 @@ let
     };
   };
   results = {
+    passthroughGuestsShareKernel =
+      lib.length (lib.unique (map (config: config.boot.kernelPackages.kernel.drvPath) passthroughGuests)) == 1;
+    passthroughGuestAssertionsPass = lib.all valid passthroughGuests;
     canPreservesDefaultKernel = (evaluate {
       hardware.nvidia-jetpack.virtualization.mttcanGuest.enable = true;
     }).boot.kernelPackages.kernel.version == base.pkgs.linuxPackages.kernel.version;

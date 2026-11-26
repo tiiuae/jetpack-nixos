@@ -9,9 +9,12 @@ let
   cfg = config.hardware.nvidia-jetpack.virtualization;
   consumers = cfg.bpmpHost.consumers;
   bpmpEnabled = consumers != { };
-  bpmpGuestEnabled = cfg.mgbe0Guest.enable || cfg.mttcanGuest.enable;
+  netGuestEnabled = cfg.mgbe0Guest.enable || cfg.mttcanGuest.enable;
+  passthroughGuestEnabled = netGuestEnabled || cfg.gpuPassthroughGuest.enable;
+  guestKernelVersion = config.boot.kernelPackages.kernel.version;
   ids = values: lib.concatStringsSep " " (map toString values);
-  support = pkgs.nvidia-jetpack.orinVirtualizationSupport.override {
+  guestSupport = pkgs.nvidia-jetpack.orinVirtualizationSupport;
+  support = guestSupport.override {
     bpmpAllowAllDomains = cfg.bpmpHost.allowAllDomains;
   };
   mgbe0 = support.passthrough.mgbe0;
@@ -474,7 +477,7 @@ in
       };
     })
 
-    (lib.mkIf bpmpGuestEnabled {
+    (lib.mkIf netGuestEnabled {
       assertions = [
         {
           assertion = !(cfg.mgbe0Guest.enable && cfg.mttcanGuest.enable)
@@ -485,6 +488,9 @@ in
       boot.kernelPackages = lib.mkForce (
         if cfg.mttcanGuest.enable then cfg.mttcanGuest.kernelPackages else cfg.mgbe0Guest.kernelPackages
       );
+    })
+
+    (lib.mkIf passthroughGuestEnabled {
       boot.kernelParams = [
         "clk_ignore_unused"
         "pd_ignore_unused"
@@ -492,25 +498,33 @@ in
       boot.kernelPatches = [
         {
           name = "BPMP virtualization proxy drivers";
-          patch = "${support}/patches/linux/bpmp-sources.patch";
+          patch = "${guestSupport}/patches/linux/bpmp-sources.patch";
         }
         {
           name = "BPMP virtualization core hooks";
           patch =
-            if lib.versionAtLeast config.boot.kernelPackages.kernel.version "7.1" then
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
-            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.18" then
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.18.patch"
-            else if lib.versionAtLeast config.boot.kernelPackages.kernel.version "6.12" then
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
+            if lib.versionAtLeast guestKernelVersion "7.1" then
+              "${guestSupport}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch"
+            else if lib.versionAtLeast guestKernelVersion "6.18" then
+              "${guestSupport}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.18.patch"
+            else if lib.versionAtLeast guestKernelVersion "6.12" then
+              "${guestSupport}/patches/linux/bpmp/0001-bpmp-virt-hooks-6.12.patch"
             else
-              "${support}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch";
+              "${guestSupport}/patches/linux/bpmp/0001-bpmp-virt-hooks.patch";
         }
         {
-          name = "BPMP guest proxy kernel configuration";
+          name = "dwmac-tegra fixed stream id";
+          patch = "${guestSupport}/patches/linux/0001-dwmac-tegra-fixed-stream-id.patch";
+        }
+        {
+          name = "tegra fixed chip id";
+          patch = "${guestSupport}/patches/linux/0004-tegra-fixed-chip-id.patch";
+        }
+        {
+          name = "Orin passthrough guest kernel configuration";
           patch = null;
           structuredExtraConfig = with lib.kernel; {
-            ARCH_TEGRA = yes;
+            ARCH_TEGRA = lib.mkForce yes;
             ARCH_TEGRA_234_SOC = yes;
             TEGRA_HSP_MBOX = yes;
             TEGRA_IVC = yes;
@@ -520,25 +534,16 @@ in
             CLK_TEGRA_BPMP = yes;
             RESET_TEGRA_BPMP = yes;
             PM_GENERIC_DOMAINS = yes;
-          };
-        }
-      ];
-    })
-
-    (lib.mkIf cfg.mgbe0Guest.enable {
-      boot.kernelPatches = [
-        {
-          name = "dwmac-tegra fixed stream id";
-          patch = "${support}/patches/linux/0001-dwmac-tegra-fixed-stream-id.patch";
-        }
-        {
-          name = "MGBE0 guest kernel configuration";
-          patch = null;
-          structuredExtraConfig = with lib.kernel; {
+            ARM64_PMEM = yes;
             STMMAC_ETH = yes;
             STMMAC_PLATFORM = yes;
             DWMAC_TEGRA = yes;
             AQUANTIA_PHY = yes;
+            CAN = yes;
+            CAN_DEV = module;
+            CAN_RAW = module;
+            # Built-in STMMAC_ETH cannot link against modular PTP_1588_CLOCK.
+            PTP_1588_CLOCK = yes;
           };
         }
       ];
@@ -549,19 +554,6 @@ in
       boot.kernelModules = [
         "nvpps"
         "mttcan"
-      ];
-      boot.kernelPatches = [
-        {
-          name = "MTTCAN guest kernel configuration";
-          patch = null;
-          structuredExtraConfig = with lib.kernel; {
-            CAN = yes;
-            CAN_DEV = module;
-            CAN_RAW = module;
-            # The same guest can also contain the built-in MGBE driver.
-            PTP_1588_CLOCK = yes;
-          };
-        }
       ];
     })
   ];
