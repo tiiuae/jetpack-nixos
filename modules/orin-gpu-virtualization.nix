@@ -112,6 +112,15 @@ in
         dceHost.enable = displayOwner;
       };
 
+      boot.kernelPatches = lib.optional (lib.versions.majorMinor cfg.dceHost.kernelPackages.kernel.version == "6.12") {
+        name = "orin-efi-avoid-guest-dram";
+        patch = pkgs.replaceVars ../pkgs/kernels/r39/efi-avoid-guest-dram.patch {
+          guestDram = lib.concatMapStringsSep ", "
+            (r: "{ 0x${lib.toHexString r.base}ULL, 0x${lib.toHexString r.size}ULL }")
+            (support.passthrough.guestDramRanges (roleEnabled "compute"));
+        };
+      };
+
       services.udev.extraRules = ''
         SUBSYSTEM=="vfio", GROUP="kvm"
       '';

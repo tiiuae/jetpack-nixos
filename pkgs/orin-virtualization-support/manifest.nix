@@ -284,7 +284,13 @@ let
 in
 {
   bpmpPolicies = import ./bpmp-policies.nix;
-  passthrough = hardware // { inherit roles; };
+  passthrough = hardware // {
+    inherit roles;
+    # Ascending DRAM ranges shared by the EFI allocator and the kernel stub.
+    # vmHs is a host1x register aperture.
+    guestDramRanges = split: with hardware.reservedMemory;
+      [ vmCma scanout ] ++ lib.optionals split [ dispRamLow dispRamHigh ];
+  };
 
   boards = {
     inherit agx;
